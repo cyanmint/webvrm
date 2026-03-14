@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { VRM, VRMExpressionPresetName } from '@pixiv/three-vrm';
+import { VRM, VRMExpressionPresetName, VRMHumanBoneName } from '@pixiv/three-vrm';
 import type { FaceTrackingResult } from './face-tracker';
 
 /**
@@ -21,6 +21,38 @@ function smooth(key: string, target: number): number {
 
 function clamp(v: number, min = 0, max = 1): number {
   return Math.max(min, Math.min(max, v));
+}
+
+/**
+ * Natural resting pose rotations (in radians) for body bones not tracked by
+ * face capture. Moves the model from T-pose into a relaxed standby posture
+ * with arms lowered at the sides.
+ */
+const STANDBY_POSE: Partial<Record<VRMHumanBoneName, { x: number; y: number; z: number }>> = {
+  // Arms down: rotate upper arms ~65° downward from T-pose
+  leftUpperArm: { x: 0, y: 0, z: 1.15 },
+  rightUpperArm: { x: 0, y: 0, z: -1.15 },
+  // Slight forearm bend inward
+  leftLowerArm: { x: 0, y: 0, z: 0.15 },
+  rightLowerArm: { x: 0, y: 0, z: -0.15 },
+  // Slight shoulder shrug
+  leftShoulder: { x: 0, y: 0, z: 0.05 },
+  rightShoulder: { x: 0, y: 0, z: -0.05 },
+};
+
+/**
+ * Apply a natural standby pose to the VRM model so that untracked body parts
+ * (arms, shoulders) rest in a relaxed position instead of T-pose.
+ */
+export function applyStandbyPose(vrm: VRM): void {
+  if (!vrm.humanoid) return;
+
+  for (const [boneName, rot] of Object.entries(STANDBY_POSE)) {
+    const bone = vrm.humanoid.getNormalizedBoneNode(boneName as VRMHumanBoneName);
+    if (bone && rot) {
+      bone.quaternion.setFromEuler(new THREE.Euler(rot.x, rot.y, rot.z));
+    }
+  }
 }
 
 export function applyFaceToVRM(
@@ -128,4 +160,6 @@ export function resetVRMExpressions(vrm: VRM): void {
     vrm.expressionManager.resetValues();
   }
   smoothedValues.clear();
+  // Re-apply standby pose so the model doesn't snap back to T-pose
+  applyStandbyPose(vrm);
 }

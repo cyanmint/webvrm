@@ -2,11 +2,13 @@ import {
   FaceLandmarker,
   FilesetResolver,
   type FaceLandmarkerResult,
+  type NormalizedLandmark,
 } from '@mediapipe/tasks-vision';
 
 export interface FaceTrackingResult {
   blendshapes: Map<string, number>;
   headRotation: { pitch: number; yaw: number; roll: number } | null;
+  landmarks: NormalizedLandmark[] | null;
 }
 
 let faceLandmarker: FaceLandmarker | null = null;
@@ -62,7 +64,7 @@ export function detectFace(video: HTMLVideoElement): FaceTrackingResult | null {
     headRotation = matrixToEuler(new Float32Array(matrix.data));
   }
 
-  return { blendshapes, headRotation };
+  return { blendshapes, headRotation, landmarks: result.faceLandmarks?.[0] ?? null };
 }
 
 function matrixToEuler(m: Float32Array): {

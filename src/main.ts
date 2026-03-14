@@ -3,6 +3,7 @@ import { createScene, resizeRenderer, resetCamera, type SceneContext } from './s
 import { loadVRM, getCurrentVRM, updateVRM } from './vrm-loader';
 import { initFaceTracker, detectFace, disposeFaceTracker } from './face-tracker';
 import { applyFaceToVRM, resetVRMExpressions } from './vrm-animator';
+import { initSkeletonCanvas, drawFaceSkeleton, clearSkeletonCanvas } from './face-skeleton';
 import {
   buildExpressionEditor,
   buildMaterialEditor,
@@ -16,10 +17,17 @@ const viewportContainer = document.getElementById(
   'viewport-container'
 ) as HTMLDivElement;
 const videoEl = document.getElementById('webcam-video') as HTMLVideoElement;
+const skeletonCanvas = document.getElementById('skeleton-canvas') as HTMLCanvasElement;
 const fileInput = document.getElementById('vrm-file-input') as HTMLInputElement;
 const toggleCameraBtn = document.getElementById(
   'toggle-camera'
 ) as HTMLButtonElement;
+const togglePreviewBtn = document.getElementById(
+  'toggle-preview'
+) as HTMLButtonElement;
+const camPreviewControls = document.getElementById(
+  'cam-preview-controls'
+) as HTMLDivElement;
 const resetCameraBtn = document.getElementById(
   'reset-camera'
 ) as HTMLButtonElement;
@@ -29,6 +37,9 @@ const fpsCounter = document.getElementById('fps-counter') as HTMLSpanElement;
 let cameraActive = false;
 let mediaStream: MediaStream | null = null;
 let faceTrackerReady = false;
+
+type PreviewMode = 'camera' | 'skeleton';
+let previewMode: PreviewMode = 'camera';
 
 // Initialize Three.js scene
 const ctx: SceneContext = createScene(canvas);
@@ -76,8 +87,15 @@ async function startCamera(): Promise<void> {
       video: { width: 640, height: 480, facingMode: 'user' },
     });
     videoEl.srcObject = mediaStream;
-    videoEl.style.display = 'block';
     await videoEl.play();
+
+    // Set skeleton canvas dimensions to match video
+    skeletonCanvas.width = videoEl.videoWidth || 640;
+    skeletonCanvas.height = videoEl.videoHeight || 480;
+    initSkeletonCanvas(skeletonCanvas);
+
+    // Show the appropriate preview based on current mode
+    updatePreviewVisibility(true);
 
     toggleCameraBtn.textContent = 'Initializing...';
 
@@ -102,8 +120,9 @@ function stopCamera(): void {
     mediaStream.getTracks().forEach((track) => track.stop());
     mediaStream = null;
   }
-  videoEl.style.display = 'none';
+  updatePreviewVisibility(false);
   videoEl.srcObject = null;
+  clearSkeletonCanvas(skeletonCanvas);
   toggleCameraBtn.textContent = 'Start Camera';
 
   const vrm = getCurrentVRM();
@@ -111,6 +130,35 @@ function stopCamera(): void {
     resetVRMExpressions(vrm);
   }
 }
+
+function updatePreviewVisibility(show: boolean): void {
+  if (show) {
+    camPreviewControls.classList.add('visible');
+    if (previewMode === 'camera') {
+      videoEl.style.display = 'block';
+      skeletonCanvas.style.display = 'none';
+    } else {
+      videoEl.style.display = 'none';
+      skeletonCanvas.style.display = 'block';
+    }
+  } else {
+    videoEl.style.display = 'none';
+    skeletonCanvas.style.display = 'none';
+    camPreviewControls.classList.remove('visible');
+  }
+}
+
+// Toggle preview mode
+togglePreviewBtn.addEventListener('click', () => {
+  previewMode = previewMode === 'camera' ? 'skeleton' : 'camera';
+  togglePreviewBtn.textContent = previewMode === 'camera' ? 'Skeleton' : 'Camera';
+  if (cameraActive) {
+    updatePreviewVisibility(true);
+    if (previewMode === 'camera') {
+      clearSkeletonCanvas(skeletonCanvas);
+    }
+  }
+});
 
 // Reset camera button
 resetCameraBtn?.addEventListener('click', () => resetCamera(ctx));
@@ -131,6 +179,16 @@ function animate(): void {
       const faceResult = detectFace(videoEl);
       if (faceResult) {
         applyFaceToVRM(vrm, faceResult);
+        // Draw face skeleton overlay when in skeleton preview mode
+        if (previewMode === 'skeleton' && faceResult.landmarks) {
+          drawFaceSkeleton(skeletonCanvas, faceResult.landmarks);
+        }
+      }
+    } else {
+      // No VRM loaded, still draw skeleton if in skeleton mode
+      const faceResult = detectFace(videoEl);
+      if (faceResult && previewMode === 'skeleton' && faceResult.landmarks) {
+        drawFaceSkeleton(skeletonCanvas, faceResult.landmarks);
       }
     }
   }
