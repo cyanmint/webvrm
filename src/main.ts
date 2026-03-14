@@ -2,8 +2,10 @@ import './style.css';
 import { createScene, resizeRenderer, resetCamera, type SceneContext } from './scene';
 import { loadVRM, getCurrentVRM, updateVRM } from './vrm-loader';
 import { initFaceTracker, detectFace, disposeFaceTracker } from './face-tracker';
-import { applyFaceToVRM, resetVRMExpressions } from './vrm-animator';
-import { initSkeletonCanvas, drawFaceSkeleton, clearSkeletonCanvas } from './face-skeleton';
+import { applyFaceToVRM, applyStandbyPose, resetVRMExpressions } from './vrm-animator';
+import { initPoseTracker, detectPose, disposePoseTracker } from './pose-tracker';
+import { applyPoseToVRM, resetPose } from './pose-animator';
+import { initSkeletonCanvas, drawFaceSkeleton, drawPoseSkeleton, clearSkeletonCanvas } from './face-skeleton';
 import {
   buildExpressionEditor,
   buildMaterialEditor,
@@ -31,6 +33,9 @@ const toggleSkeletonBtn = document.getElementById(
 const closePreviewBtn = document.getElementById(
   'close-preview'
 ) as HTMLButtonElement;
+const trackingModeSelect = document.getElementById(
+  'tracking-mode'
+) as HTMLSelectElement;
 const resetCameraBtn = document.getElementById(
   'reset-camera'
 ) as HTMLButtonElement;
@@ -40,8 +45,11 @@ const fpsCounter = document.getElementById('fps-counter') as HTMLSpanElement;
 let cameraActive = false;
 let mediaStream: MediaStream | null = null;
 let faceTrackerReady = false;
+let poseTrackerReady = false;
 let skeletonOverlay = false;
-let previewVisible = true;
+
+type TrackingMode = 'faceOnly' | 'fullBody';
+let trackingMode: TrackingMode = 'faceOnly';
 
 // Initialize Three.js scene
 const ctx: SceneContext = createScene(canvas);
@@ -97,7 +105,6 @@ async function startCamera(): Promise<void> {
     initSkeletonCanvas(skeletonCanvas);
 
     // Show the cam preview pane
-    previewVisible = true;
     camPreviewPane.classList.add('visible');
     updateSkeletonVisibility();
 
@@ -106,6 +113,11 @@ async function startCamera(): Promise<void> {
     if (!faceTrackerReady) {
       await initFaceTracker();
       faceTrackerReady = true;
+    }
+
+    if (trackingMode === 'fullBody' && !poseTrackerReady) {
+      await initPoseTracker();
+      poseTrackerReady = true;
     }
 
     cameraActive = true;
@@ -131,6 +143,7 @@ function stopCamera(): void {
 
   const vrm = getCurrentVRM();
   if (vrm) {
+    resetPose(vrm);
     resetVRMExpressions(vrm);
   }
 }
@@ -153,8 +166,27 @@ toggleSkeletonBtn.addEventListener('click', () => {
 
 // Close preview pane (tracking continues, just hides the preview)
 closePreviewBtn.addEventListener('click', () => {
-  previewVisible = false;
   camPreviewPane.classList.remove('visible');
+});
+
+// Tracking mode change
+trackingModeSelect.addEventListener('change', async () => {
+  trackingMode = trackingModeSelect.value as TrackingMode;
+
+  if (trackingMode === 'fullBody' && cameraActive && !poseTrackerReady) {
+    toggleCameraBtn.textContent = 'Initializing...';
+    await initPoseTracker();
+    poseTrackerReady = true;
+    toggleCameraBtn.textContent = 'Stop Camera';
+  }
+
+  if (trackingMode === 'faceOnly') {
+    const vrm = getCurrentVRM();
+    if (vrm) {
+      resetPose(vrm);
+      applyStandbyPose(vrm);
+    }
+  }
 });
 
 // Reset camera button
@@ -169,21 +201,35 @@ function animate(): void {
 
   const delta = ctx.clock.getDelta();
 
-  // Face tracking
+  // Face and pose tracking
   if (cameraActive) {
+    // Face detection (always active)
+    const faceResult = detectFace(videoEl);
+
+    // Pose detection (full body mode only)
+    const poseResult =
+      trackingMode === 'fullBody' && poseTrackerReady
+        ? detectPose(videoEl)
+        : null;
+
+    // Apply to VRM
     const vrm = getCurrentVRM();
     if (vrm) {
-      const faceResult = detectFace(videoEl);
       if (faceResult) {
         applyFaceToVRM(vrm, faceResult);
-        if (skeletonOverlay && faceResult.landmarks) {
-          drawFaceSkeleton(skeletonCanvas, faceResult.landmarks);
-        }
       }
-    } else {
-      // No VRM loaded, still draw skeleton if overlay is on
-      const faceResult = detectFace(videoEl);
-      if (faceResult && skeletonOverlay && faceResult.landmarks) {
+      if (poseResult) {
+        applyPoseToVRM(vrm, poseResult);
+      }
+    }
+
+    // Skeleton overlay drawing
+    if (skeletonOverlay) {
+      clearSkeletonCanvas(skeletonCanvas);
+      if (poseResult && poseResult.landmarks.length > 0) {
+        drawPoseSkeleton(skeletonCanvas, poseResult.landmarks);
+      }
+      if (faceResult?.landmarks) {
         drawFaceSkeleton(skeletonCanvas, faceResult.landmarks);
       }
     }
@@ -214,4 +260,5 @@ animate();
 window.addEventListener('beforeunload', () => {
   stopCamera();
   disposeFaceTracker();
+  disposePoseTracker();
 });

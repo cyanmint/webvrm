@@ -1,6 +1,7 @@
 import {
   DrawingUtils,
   FaceLandmarker,
+  PoseLandmarker,
   type NormalizedLandmark,
 } from '@mediapipe/tasks-vision';
 
@@ -15,12 +16,10 @@ export function initSkeletonCanvas(canvas: HTMLCanvasElement): void {
 }
 
 export function drawFaceSkeleton(
-  canvas: HTMLCanvasElement,
+  _canvas: HTMLCanvasElement,
   landmarks: NormalizedLandmark[]
 ): void {
   if (!canvasCtx || !drawingUtils) return;
-
-  canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Draw face mesh tesselation
   drawingUtils.drawConnectors(
@@ -78,6 +77,25 @@ export function drawFaceSkeleton(
     FaceLandmarker.FACE_LANDMARKS_LIPS,
     { color: '#e94560', lineWidth: 1.5 }
   );
+}
+
+export function drawPoseSkeleton(
+  _canvas: HTMLCanvasElement,
+  landmarks: NormalizedLandmark[]
+): void {
+  if (!canvasCtx || !drawingUtils) return;
+
+  drawingUtils.drawConnectors(
+    landmarks,
+    PoseLandmarker.POSE_CONNECTIONS,
+    { color: '#4ecdc4', lineWidth: 2 }
+  );
+
+  drawingUtils.drawLandmarks(landmarks, {
+    color: '#ff6b81',
+    lineWidth: 1,
+    radius: 2,
+  });
 }
 
 export function clearSkeletonCanvas(canvas: HTMLCanvasElement): void {
