@@ -21,14 +21,12 @@ export function drawFaceSkeleton(
   if (!canvasCtx || !drawingUtils) return;
 
   canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-  canvasCtx.fillStyle = '#1a1a2e';
-  canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Draw face mesh tesselation
   drawingUtils.drawConnectors(
     landmarks,
     FaceLandmarker.FACE_LANDMARKS_TESSELATION,
-    { color: '#2a2a4a', lineWidth: 0.5 }
+    { color: 'rgba(42, 42, 74, 0.4)', lineWidth: 0.5 }
   );
 
   // Draw face contours

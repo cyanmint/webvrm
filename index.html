@@ -18,10 +18,15 @@
       <main id="workspace">
         <div id="viewport-container">
           <canvas id="three-canvas"></canvas>
-          <video id="webcam-video" autoplay playsinline></video>
-          <canvas id="skeleton-canvas"></canvas>
-          <div id="cam-preview-controls">
-            <button id="toggle-preview" class="btn btn-small">Skeleton</button>
+          <div id="cam-preview-pane">
+            <div id="cam-preview-header">
+              <button id="toggle-skeleton" class="btn btn-small">Skeleton</button>
+              <button id="close-preview" class="btn btn-small">✕</button>
+            </div>
+            <div id="cam-preview-content">
+              <video id="webcam-video" autoplay playsinline></video>
+              <canvas id="skeleton-canvas"></canvas>
+            </div>
           </div>
           <div id="viewport-info">
             <span id="fps-counter">FPS: --</span>

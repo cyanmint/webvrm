@@ -97,39 +97,56 @@ html, body {
   display: block;
 }
 
-#webcam-video {
+/* Cam preview pane */
+#cam-preview-pane {
   position: absolute;
   bottom: 10px;
   left: 10px;
-  width: 200px;
+  display: none;
+  flex-direction: column;
   border-radius: var(--radius);
   border: 2px solid var(--border);
-  display: none;
+  overflow: hidden;
+  background: var(--bg-dark);
+}
+
+#cam-preview-pane.visible {
+  display: flex;
+}
+
+#cam-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.2rem 0.3rem;
+  background: var(--bg-panel);
+  gap: 0.3rem;
+}
+
+#cam-preview-content {
+  position: relative;
+  width: 200px;
+}
+
+#webcam-video {
+  width: 100%;
+  display: block;
   transform: scaleX(-1);
 }
 
 #skeleton-canvas {
   position: absolute;
-  bottom: 10px;
-  left: 10px;
-  width: 200px;
-  border-radius: var(--radius);
-  border: 2px solid var(--border);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   display: none;
   transform: scaleX(-1);
+  pointer-events: none;
 }
 
-#cam-preview-controls {
-  position: absolute;
-  bottom: 10px;
-  left: 220px;
-  display: none;
-}
-
-#cam-preview-controls.visible {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
+#skeleton-canvas.visible {
+  display: block;
 }
 
 #viewport-info {
@@ -306,7 +323,7 @@ html, body {
     border-left: none;
     border-top: 1px solid var(--border);
   }
-  #webcam-video {
+  #cam-preview-content {
     width: 120px;
   }
 }
