@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebVRM - VTubing &amp; VRM Editor</title>
+  </head>
+  <body>
+    <div id="app">
+      <header id="toolbar">
+        <h1>WebVRM</h1>
+        <div id="toolbar-actions">
+          <label id="load-vrm-label" class="btn" for="vrm-file-input">Load VRM</label>
+          <input type="file" id="vrm-file-input" accept=".vrm" />
+          <button id="toggle-camera" class="btn">Start Camera</button>
+        </div>
+      </header>
+      <main id="workspace">
+        <div id="viewport-container">
+          <canvas id="three-canvas"></canvas>
+          <video id="webcam-video" autoplay playsinline></video>
+          <div id="viewport-info">
+            <span id="fps-counter">FPS: --</span>
+          </div>
+        </div>
+        <aside id="editor-panel">
+          <div id="editor-tabs">
+            <button class="tab active" data-tab="expressions">Expressions</button>
+            <button class="tab" data-tab="materials">Materials</button>
+            <button class="tab" data-tab="scene">Scene</button>
+          </div>
+          <div id="editor-content">
+            <section id="tab-expressions" class="tab-content active">
+              <p class="placeholder">Load a VRM model to edit expressions</p>
+            </section>
+            <section id="tab-materials" class="tab-content">
+              <p class="placeholder">Load a VRM model to edit materials</p>
+            </section>
+            <section id="tab-scene" class="tab-content">
+              <h3>Lighting</h3>
+              <div class="control-group">
+                <label>Ambient Intensity</label>
+                <input type="range" id="ambient-intensity" min="0" max="2" step="0.05" value="0.6" />
+              </div>
+              <div class="control-group">
+                <label>Directional Intensity</label>
+                <input type="range" id="dir-intensity" min="0" max="3" step="0.05" value="1.0" />
+              </div>
+              <div class="control-group">
+                <label>Directional Color</label>
+                <input type="color" id="dir-color" value="#ffffff" />
+              </div>
+              <h3>Background</h3>
+              <div class="control-group">
+                <label>Background Color</label>
+                <input type="color" id="bg-color" value="#1a1a2e" />
+              </div>
+              <h3>Camera</h3>
+              <div class="control-group">
+                <button id="reset-camera" class="btn btn-small">Reset Camera</button>
+              </div>
+            </section>
+          </div>
+        </aside>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
