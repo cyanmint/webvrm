@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { VRM, VRMExpressionPresetName, VRMHumanBoneName } from '@pixiv/three-vrm';
+import { VRM, VRMExpressionPresetName } from '@pixiv/three-vrm';
 import type { FaceTrackingResult } from './face-tracker';
 
 /**
@@ -23,50 +23,16 @@ function clamp(v: number, min = 0, max = 1): number {
   return Math.max(min, Math.min(max, v));
 }
 
-// Reused constant for standby-pose arm rotation axis
-const Z_AXIS = new THREE.Vector3(0, 0, 1);
-
 /**
- * Apply the VRM 1.0 standby pose: lower upper arms ~60° from T-pose so the
- * model displays with arms resting naturally at its sides instead of the
- * default horizontal T-pose position.
- *
- * In the normalized VRM humanoid coordinate system, the T-pose is represented
- * by identity quaternions. Rotating each upper arm ~60° around the Z-axis
- * brings the arms from horizontal to a natural hanging position.
- *
- * `setFromAxisAngle` is used intentionally to set an absolute rotation from
- * the normalized T-pose rest (identity), not to compose on top of an unknown
- * existing rotation.
- */
-export function applyStandbyPose(vrm: VRM): void {
-  if (!vrm.humanoid) return;
-
-  // 60° in radians – lowers arms to a natural resting position
-  const angle = Math.PI / 3;
-
-  const leftArmBone = vrm.humanoid.getNormalizedBoneNode(
-    VRMHumanBoneName.LeftUpperArm
-  );
-  const rightArmBone = vrm.humanoid.getNormalizedBoneNode(
-    VRMHumanBoneName.RightUpperArm
-  );
-
-  if (leftArmBone) {
-    leftArmBone.quaternion.setFromAxisAngle(Z_AXIS, angle);
-  }
-  if (rightArmBone) {
-    rightArmBone.quaternion.setFromAxisAngle(Z_AXIS, -angle);
-  }
-}
-
-/**
- * Reset all normalized bone transforms to the rest (T-pose) state and then
- * apply the standby pose so the model looks natural when no tracking is active.
+ * Restore the model's own authored standby pose by resetting all normalized
+ * bone transforms to identity. three-vrm's VRMHumanoidRig.update() then
+ * applies each bone's original local quaternion (stored from the glTF file)
+ * to the raw skeleton, so the model displays exactly as the author designed it.
+ * This works correctly for both VRM 0.0 and VRM 1.0 models without any
+ * hardcoded rotations.
  */
 export function restoreModelPose(vrm: VRM): void {
   vrm.humanoid?.resetNormalizedPose();
-  applyStandbyPose(vrm);
 }
 
 export function applyFaceToVRM(
