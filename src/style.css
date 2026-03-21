@@ -247,7 +247,9 @@ html, body {
 }
 
 .control-group label {
-  display: block;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 0.78rem;
   color: var(--text-muted);
   margin-bottom: 0.2rem;
@@ -288,6 +290,7 @@ html, body {
 .expression-control label {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 0.78rem;
   color: var(--text-muted);
   margin-bottom: 0.15rem;
@@ -345,6 +348,175 @@ html, body {
   height: 16px;
   accent-color: var(--accent);
   cursor: pointer;
+}
+
+/* Pose manager */
+.pose-preset-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.pose-toolbar {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pose-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.pose-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-input);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.5rem;
+}
+
+.pose-item-name {
+  font-size: 0.82rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  margin-right: 0.3rem;
+}
+
+.pose-item-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.btn-danger {
+  color: var(--accent);
+}
+
+.btn-danger:hover {
+  background: var(--accent);
+  color: var(--text);
+}
+
+/* Pose detail - bone rotation sliders */
+.pose-detail-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.bone-row {
+  background: var(--bg-input);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.4rem;
+  margin-bottom: 0.3rem;
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.bone-row-selected {
+  border-color: var(--accent);
+}
+
+.bone-name-btn {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  padding: 0.15rem 0;
+  margin-bottom: 0.15rem;
+}
+
+.bone-name-btn:hover {
+  color: var(--accent);
+}
+
+.bone-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.bone-slider-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.bone-slider-row label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 0;
+}
+
+.bone-slider-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  height: 14px;
+}
+
+/* Inline number input used alongside range sliders */
+.slider-num-input {
+  width: 52px;
+  background: var(--bg-dark);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.1rem 0.2rem;
+  font-size: 0.72rem;
+  text-align: right;
+  -moz-appearance: textfield;
+}
+
+.slider-num-input::-webkit-outer-spin-button,
+.slider-num-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.slider-num-input:focus {
+  outline: 1px solid var(--accent);
+  border-color: var(--accent);
+}
+
+/* Camera setter */
+.cam-setter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cam-setter-row label {
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.num-input {
+  width: 100%;
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.25rem 0.4rem;
+  font-size: 0.8rem;
+}
+
+.num-input:focus {
+  outline: 1px solid var(--accent);
 }
 
 /* Responsive */

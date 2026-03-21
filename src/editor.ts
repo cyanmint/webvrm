@@ -23,11 +23,15 @@ const PRESET_EXPRESSION_NAMES: string[] = [
   VRMExpressionPresetName.Neutral,
 ];
 
+// Track expression slider elements so we can update them from the animation loop
+const expressionSliders = new Map<string, { input: HTMLInputElement; numInput: HTMLInputElement }>();
+
 export function buildExpressionEditor(vrm: VRM): void {
   const container = document.getElementById('tab-expressions');
   if (!container) return;
 
   container.innerHTML = '';
+  expressionSliders.clear();
 
   const expr = vrm.expressionManager;
   if (!expr || expr.expressions.length === 0) {
@@ -43,35 +47,9 @@ export function buildExpressionEditor(vrm: VRM): void {
     const expression = expr.getExpression(name);
     if (!expression) continue;
 
-    const div = document.createElement('div');
-    div.className = 'expression-control';
-
-    const label = document.createElement('label');
-    const nameSpan = document.createElement('span');
-    nameSpan.textContent = name;
-    const valueSpan = document.createElement('span');
-    valueSpan.className = 'range-value';
-    valueSpan.textContent = '0.00';
-    label.appendChild(nameSpan);
-    label.appendChild(valueSpan);
-
-    const input = document.createElement('input');
-    input.type = 'range';
-    input.min = '0';
-    input.max = '1';
-    input.step = '0.01';
-    input.value = '0';
-    input.dataset.expressionName = name;
-
-    input.addEventListener('input', () => {
-      const val = parseFloat(input.value);
-      expr.setValue(name, val);
-      valueSpan.textContent = val.toFixed(2);
-    });
-
-    div.appendChild(label);
-    div.appendChild(input);
+    const { div, rangeInput, numInput } = createExpressionControl(name, expr);
     container.appendChild(div);
+    expressionSliders.set(name, { input: rangeInput, numInput });
   }
 
   // Custom expressions
@@ -82,35 +60,86 @@ export function buildExpressionEditor(vrm: VRM): void {
     container.appendChild(customHeading);
 
     for (const name of customNames) {
-      const div = document.createElement('div');
-      div.className = 'expression-control';
-
-      const label = document.createElement('label');
-      const nameSpan = document.createElement('span');
-      nameSpan.textContent = name;
-      const valueSpan = document.createElement('span');
-      valueSpan.className = 'range-value';
-      valueSpan.textContent = '0.00';
-      label.appendChild(nameSpan);
-      label.appendChild(valueSpan);
-
-      const input = document.createElement('input');
-      input.type = 'range';
-      input.min = '0';
-      input.max = '1';
-      input.step = '0.01';
-      input.value = '0';
-
-      input.addEventListener('input', () => {
-        const val = parseFloat(input.value);
-        expr.setValue(name, val);
-        valueSpan.textContent = val.toFixed(2);
-      });
-
-      div.appendChild(label);
-      div.appendChild(input);
+      const { div, rangeInput, numInput } = createExpressionControl(name, expr);
       container.appendChild(div);
+      expressionSliders.set(name, { input: rangeInput, numInput });
     }
+  }
+}
+
+function createExpressionControl(
+  name: string,
+  expr: NonNullable<VRM['expressionManager']>,
+): { div: HTMLDivElement; rangeInput: HTMLInputElement; numInput: HTMLInputElement } {
+  const div = document.createElement('div');
+  div.className = 'expression-control';
+
+  const label = document.createElement('label');
+  const nameSpan = document.createElement('span');
+  nameSpan.textContent = name;
+
+  const numInput = document.createElement('input');
+  numInput.type = 'number';
+  numInput.className = 'slider-num-input';
+  numInput.min = '0';
+  numInput.max = '1';
+  numInput.step = '0.01';
+  numInput.value = '0.00';
+
+  label.appendChild(nameSpan);
+  label.appendChild(numInput);
+
+  const rangeInput = document.createElement('input');
+  rangeInput.type = 'range';
+  rangeInput.min = '0';
+  rangeInput.max = '1';
+  rangeInput.step = '0.01';
+  rangeInput.value = '0';
+  rangeInput.dataset.expressionName = name;
+
+  // Range → update number and VRM
+  rangeInput.addEventListener('input', () => {
+    const val = parseFloat(rangeInput.value);
+    expr.setValue(name, val);
+    numInput.value = val.toFixed(2);
+  });
+
+  // Number input → update range and VRM
+  numInput.addEventListener('input', () => {
+    let val = parseFloat(numInput.value);
+    if (isNaN(val)) return;
+    val = Math.max(0, Math.min(1, val));
+    rangeInput.value = val.toFixed(2);
+    expr.setValue(name, val);
+  });
+
+  numInput.addEventListener('change', () => {
+    let val = parseFloat(numInput.value);
+    if (isNaN(val)) val = 0;
+    val = Math.max(0, Math.min(1, val));
+    numInput.value = val.toFixed(2);
+    rangeInput.value = val.toFixed(2);
+    expr.setValue(name, val);
+  });
+
+  div.appendChild(label);
+  div.appendChild(rangeInput);
+
+  return { div, rangeInput, numInput };
+}
+
+/**
+ * Update expression slider positions to reflect current VRM expression values.
+ * Called from the animation loop so sliders track face-tracking changes.
+ */
+export function updateExpressionSliders(vrm: VRM): void {
+  const expr = vrm.expressionManager;
+  if (!expr) return;
+
+  for (const [name, { input, numInput }] of expressionSliders) {
+    const val = expr.getValue(name) ?? 0;
+    input.value = val.toFixed(2);
+    numInput.value = val.toFixed(2);
   }
 }
 
@@ -173,11 +202,17 @@ export function buildMaterialEditor(vrm: VRM): void {
     const opacityLabel = document.createElement('label');
     const opacityNameSpan = document.createElement('span');
     opacityNameSpan.textContent = 'Opacity';
-    const opacityValueSpan = document.createElement('span');
-    opacityValueSpan.className = 'range-value';
-    opacityValueSpan.textContent = mat.opacity.toFixed(2);
+
+    const opacityNumInput = document.createElement('input');
+    opacityNumInput.type = 'number';
+    opacityNumInput.className = 'slider-num-input';
+    opacityNumInput.min = '0';
+    opacityNumInput.max = '1';
+    opacityNumInput.step = '0.01';
+    opacityNumInput.value = mat.opacity.toFixed(2);
+
     opacityLabel.appendChild(opacityNameSpan);
-    opacityLabel.appendChild(opacityValueSpan);
+    opacityLabel.appendChild(opacityNumInput);
     opacityGroup.appendChild(opacityLabel);
 
     const opacityInput = document.createElement('input');
@@ -190,8 +225,27 @@ export function buildMaterialEditor(vrm: VRM): void {
       const val = parseFloat(opacityInput.value);
       mat.opacity = val;
       mat.transparent = val < 1;
-      opacityValueSpan.textContent = val.toFixed(2);
+      opacityNumInput.value = val.toFixed(2);
     });
+
+    opacityNumInput.addEventListener('input', () => {
+      let val = parseFloat(opacityNumInput.value);
+      if (isNaN(val)) return;
+      val = Math.max(0, Math.min(1, val));
+      opacityInput.value = val.toFixed(2);
+      mat.opacity = val;
+      mat.transparent = val < 1;
+    });
+    opacityNumInput.addEventListener('change', () => {
+      let val = parseFloat(opacityNumInput.value);
+      if (isNaN(val)) val = 1;
+      val = Math.max(0, Math.min(1, val));
+      opacityNumInput.value = val.toFixed(2);
+      opacityInput.value = val.toFixed(2);
+      mat.opacity = val;
+      mat.transparent = val < 1;
+    });
+
     opacityGroup.appendChild(opacityInput);
     item.appendChild(opacityGroup);
 
@@ -223,6 +277,8 @@ export function buildMaterialEditor(vrm: VRM): void {
   });
 }
 
+let camUpdateInterval: number | null = null;
+
 export function setupSceneEditor(ctx: SceneContext): void {
   const ambientInput = document.getElementById(
     'ambient-intensity'
@@ -252,6 +308,60 @@ export function setupSceneEditor(ctx: SceneContext): void {
   bgColorInput?.addEventListener('input', () => {
     (ctx.scene.background as THREE.Color).set(bgColorInput.value);
   });
+
+  // Camera setter controls
+  const camX = document.getElementById('cam-pos-x') as HTMLInputElement | null;
+  const camY = document.getElementById('cam-pos-y') as HTMLInputElement | null;
+  const camZ = document.getElementById('cam-pos-z') as HTMLInputElement | null;
+  const camRX = document.getElementById('cam-rot-x') as HTMLInputElement | null;
+  const camRY = document.getElementById('cam-rot-y') as HTMLInputElement | null;
+  const camRZ = document.getElementById('cam-rot-z') as HTMLInputElement | null;
+
+  function updateCamInputs(): void {
+    if (camX) camX.value = ctx.camera.position.x.toFixed(2);
+    if (camY) camY.value = ctx.camera.position.y.toFixed(2);
+    if (camZ) camZ.value = ctx.camera.position.z.toFixed(2);
+    const euler = new THREE.Euler().setFromQuaternion(ctx.camera.quaternion, 'YXZ');
+    const rad2deg = 180 / Math.PI;
+    if (camRX) camRX.value = (euler.x * rad2deg).toFixed(1);
+    if (camRY) camRY.value = (euler.y * rad2deg).toFixed(1);
+    if (camRZ) camRZ.value = (euler.z * rad2deg).toFixed(1);
+  }
+
+  function applyCamPosition(): void {
+    if (!camX || !camY || !camZ) return;
+    ctx.camera.position.set(
+      parseFloat(camX.value) || 0,
+      parseFloat(camY.value) || 0,
+      parseFloat(camZ.value) || 0,
+    );
+    ctx.controls.update();
+  }
+
+  function applyCamRotation(): void {
+    if (!camRX || !camRY || !camRZ) return;
+    const deg2rad = Math.PI / 180;
+    const rx = (parseFloat(camRX.value) || 0) * deg2rad;
+    const ry = (parseFloat(camRY.value) || 0) * deg2rad;
+    const rz = (parseFloat(camRZ.value) || 0) * deg2rad;
+    // Compute look target from camera rotation
+    const dir = new THREE.Vector3(0, 0, -1).applyEuler(
+      new THREE.Euler(rx, ry, rz, 'YXZ'),
+    );
+    ctx.controls.target.copy(ctx.camera.position).add(dir);
+    ctx.controls.update();
+  }
+
+  camX?.addEventListener('change', applyCamPosition);
+  camY?.addEventListener('change', applyCamPosition);
+  camZ?.addEventListener('change', applyCamPosition);
+  camRX?.addEventListener('change', applyCamRotation);
+  camRY?.addEventListener('change', applyCamRotation);
+  camRZ?.addEventListener('change', applyCamRotation);
+
+  // Periodically update camera input fields to reflect orbit control changes
+  if (camUpdateInterval !== null) clearInterval(camUpdateInterval);
+  camUpdateInterval = window.setInterval(updateCamInputs, 500);
 }
 
 export function setupTabs(): void {

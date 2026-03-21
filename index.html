@@ -21,6 +21,7 @@
             <option value="faceOnly">Face Only</option>
             <option value="fullBody">Full Body</option>
           </select>
+          <button id="camera-mode-btn" class="btn">🔄 Rotate</button>
           <button id="toggle-camera" class="btn">Start Camera</button>
         </div>
       </header>
@@ -45,6 +46,7 @@
         <aside id="editor-panel">
           <div id="editor-tabs">
             <button class="tab active" data-tab="expressions">Expressions</button>
+            <button class="tab" data-tab="poses">Poses</button>
             <button class="tab" data-tab="materials">Materials</button>
             <button class="tab" data-tab="scene">Scene</button>
             <button class="tab" data-tab="settings">Settings</button>
@@ -52,6 +54,9 @@
           <div id="editor-content">
             <section id="tab-expressions" class="tab-content active">
               <p class="placeholder">Load a VRM model to edit expressions</p>
+            </section>
+            <section id="tab-poses" class="tab-content">
+              <p class="placeholder">Load a VRM model to manage poses</p>
             </section>
             <section id="tab-materials" class="tab-content">
               <p class="placeholder">Load a VRM model to edit materials</p>
@@ -78,6 +83,30 @@
               <h3>Camera</h3>
               <div class="control-group">
                 <button id="reset-camera" class="btn btn-small">Reset Camera</button>
+              </div>
+              <div class="control-group cam-setter-row">
+                <label>Position X</label>
+                <input type="number" id="cam-pos-x" step="0.1" value="0" class="num-input" />
+              </div>
+              <div class="control-group cam-setter-row">
+                <label>Position Y</label>
+                <input type="number" id="cam-pos-y" step="0.1" value="1.4" class="num-input" />
+              </div>
+              <div class="control-group cam-setter-row">
+                <label>Position Z</label>
+                <input type="number" id="cam-pos-z" step="0.1" value="1.2" class="num-input" />
+              </div>
+              <div class="control-group cam-setter-row">
+                <label>Rotate X°</label>
+                <input type="number" id="cam-rot-x" step="1" value="0" class="num-input" />
+              </div>
+              <div class="control-group cam-setter-row">
+                <label>Rotate Y°</label>
+                <input type="number" id="cam-rot-y" step="1" value="0" class="num-input" />
+              </div>
+              <div class="control-group cam-setter-row">
+                <label>Rotate Z°</label>
+                <input type="number" id="cam-rot-z" step="1" value="0" class="num-input" />
               </div>
             </section>
             <section id="tab-settings" class="tab-content">
