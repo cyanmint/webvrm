@@ -7,7 +7,7 @@ import { applyFaceToVRM, restoreModelPose } from './vrm-animator';
 import { initPoseTracker, detectPose, disposePoseTracker } from './pose-tracker';
 import { applyPoseToVRM, resetPose } from './pose-animator';
 import { POSE_PRESETS } from './pose-presets';
-import { initBoneSelector, setBoneSelectorVRM, setBoneSelectorEnabled, onBoneSelected } from './bone-selector';
+import { initBoneSelector, setBoneSelectorVRM, setBoneSelectorEnabled, onBoneSelected, onBoneRotated } from './bone-selector';
 import { buildPoseManagerPanel, highlightBoneRow, refreshBoneSliders } from './pose-manager';
 import { initSkeletonCanvas, drawFaceSkeleton, drawPoseSkeleton, clearSkeletonCanvas } from './face-skeleton';
 import {
@@ -87,11 +87,14 @@ setupTabs();
 setupSceneEditor(ctx);
 
 // Initialize bone selector for click-to-select posing
-initBoneSelector(canvas, ctx.camera);
+initBoneSelector(canvas, ctx.camera, ctx.controls);
 setBoneSelectorEnabled(true);
 onBoneSelected((boneName) => {
   highlightBoneRow(boneName);
   if (boneName) refreshBoneSliders(boneName);
+});
+onBoneRotated((boneName) => {
+  refreshBoneSliders(boneName);
 });
 
 // Camera mode toggle

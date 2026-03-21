@@ -247,7 +247,9 @@ html, body {
 }
 
 .control-group label {
-  display: block;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 0.78rem;
   color: var(--text-muted);
   margin-bottom: 0.2rem;
@@ -288,6 +290,7 @@ html, body {
 .expression-control label {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 0.78rem;
   color: var(--text-muted);
   margin-bottom: 0.15rem;
@@ -454,6 +457,7 @@ html, body {
 .bone-slider-row label {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 0.72rem;
   color: var(--text-muted);
   margin-bottom: 0;
@@ -463,6 +467,30 @@ html, body {
   width: 100%;
   accent-color: var(--accent);
   height: 14px;
+}
+
+/* Inline number input used alongside range sliders */
+.slider-num-input {
+  width: 52px;
+  background: var(--bg-dark);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.1rem 0.2rem;
+  font-size: 0.72rem;
+  text-align: right;
+  -moz-appearance: textfield;
+}
+
+.slider-num-input::-webkit-outer-spin-button,
+.slider-num-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.slider-num-input:focus {
+  outline: 1px solid var(--accent);
+  border-color: var(--accent);
 }
 
 /* Camera setter */

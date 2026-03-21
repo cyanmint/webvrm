@@ -278,10 +278,15 @@ function createRotationSlider(
   const label = document.createElement('label');
   const colors: Record<string, string> = { X: '#ff4444', Y: '#44ff44', Z: '#4444ff' };
   label.innerHTML = `<span style="color:${colors[axis]}">${axis}</span>`;
-  const valSpan = document.createElement('span');
-  valSpan.className = 'range-value';
-  valSpan.textContent = '0°';
-  label.appendChild(valSpan);
+
+  const numInput = document.createElement('input');
+  numInput.type = 'number';
+  numInput.className = 'slider-num-input';
+  numInput.min = '-180';
+  numInput.max = '180';
+  numInput.step = '1';
+  numInput.value = '0';
+  label.appendChild(numInput);
 
   const slider = document.createElement('input');
   slider.type = 'range';
@@ -290,15 +295,36 @@ function createRotationSlider(
   slider.step = '1';
   slider.value = '0';
 
+  // Range slider → update number input and apply rotation
   slider.addEventListener('input', () => {
+    numInput.value = slider.value;
     applyBoneRotation(boneName);
-    valSpan.textContent = `${slider.value}°`;
+  });
+
+  // Number input → update range slider and apply rotation
+  numInput.addEventListener('input', () => {
+    let val = parseInt(numInput.value, 10);
+    if (isNaN(val)) return;
+    val = Math.max(-180, Math.min(180, val));
+    slider.value = String(val);
+    applyBoneRotation(boneName);
+  });
+
+  // Also handle 'change' for when user tabs out or presses Enter
+  numInput.addEventListener('change', () => {
+    let val = parseInt(numInput.value, 10);
+    if (isNaN(val)) val = 0;
+    val = Math.max(-180, Math.min(180, val));
+    numInput.value = String(val);
+    slider.value = String(val);
+    applyBoneRotation(boneName);
   });
 
   wrap.appendChild(label);
   wrap.appendChild(slider);
 
-  return { slider, valSpan };
+  // Use the numInput as the valSpan so refreshBoneSliders can update it
+  return { slider, valSpan: numInput };
 }
 
 function applyBoneRotation(boneName: string): void {
@@ -352,9 +378,10 @@ export function refreshBoneSliders(boneName: string): void {
   entry.rx.value = String(rx);
   entry.ry.value = String(ry);
   entry.rz.value = String(rz);
-  entry.rxVal.textContent = `${rx}°`;
-  entry.ryVal.textContent = `${ry}°`;
-  entry.rzVal.textContent = `${rz}°`;
+  // rxVal, ryVal, rzVal are now <input> elements
+  (entry.rxVal as HTMLInputElement).value = String(rx);
+  (entry.ryVal as HTMLInputElement).value = String(ry);
+  (entry.rzVal as HTMLInputElement).value = String(rz);
 }
 
 /**
