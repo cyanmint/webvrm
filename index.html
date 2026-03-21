@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebVRM - VTubing &amp; VRM Editor</title>
+    <script type="module" crossorigin src="./assets/index-gzRBun4Q.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-hbTt54et.css">
+  </head>
+  <body>
+    <div id="app">
+      <header id="toolbar">
+        <h1>WebVRM</h1>
+        <div id="toolbar-actions">
+          <label id="load-vrm-label" class="btn" for="vrm-file-input">Load VRM</label>
+          <input type="file" id="vrm-file-input" accept=".vrm" />
+          <select id="pose-selector" class="btn">
+            <option value="preset:Default">Default</option>
+            <option value="preset:T-Pose">T-Pose</option>
+            <option value="preset:A-Pose">A-Pose</option>
+          </select>
+          <select id="tracking-mode" class="btn">
+            <option value="faceOnly">Face Only</option>
+            <option value="fullBody">Full Body</option>
+          </select>
+          <button id="camera-mode-btn" class="btn">🔄 Rotate</button>
+          <button id="toggle-camera" class="btn">Start Camera</button>
+        </div>
+      </header>
+      <main id="workspace">
+        <div id="viewport-container">
+          <canvas id="three-canvas"></canvas>
+          <div id="cam-preview-pane">
+            <div id="cam-preview-header">
+              <button id="toggle-skeleton" class="btn btn-small">Skeleton</button>
+              <button id="close-preview" class="btn btn-small">✕</button>
+            </div>
+            <div id="cam-preview-content">
+              <video id="webcam-video" autoplay playsinline></video>
+              <canvas id="skeleton-canvas"></canvas>
+            </div>
+          </div>
+          <div id="viewport-info">
+            <span id="fps-counter">FPS: --</span>
+          </div>
+          <div id="loading-status" class="visible">Loading...</div>
+        </div>
+        <aside id="editor-panel">
+          <div id="editor-tabs">
+            <button class="tab active" data-tab="expressions">Expressions</button>
+            <button class="tab" data-tab="poses">Poses</button>
+            <button class="tab" data-tab="materials">Materials</button>
+            <button class="tab" data-tab="scene">Scene</button>
+            <button class="tab" data-tab="settings">Settings</button>
+          </div>
+          <div id="editor-content">
+            <section id="tab-expressions" class="tab-content active">
+              <p class="placeholder">Load a VRM model to edit expressions</p>
+            </section>
+            <section id="tab-poses" class="tab-content">
+              <p class="placeholder">Load a VRM model to manage poses</p>
+            </section>
+            <section id="tab-materials" class="tab-content">
+              <p class="placeholder">Load a VRM model to edit materials</p>
+            </section>
+            <section id="tab-scene" class="tab-content">
+              <h3>Lighting</h3>
+              <div class="control-group">
+                <label>Ambient Intensity</label>
+                <input type="range" id="ambient-intensity" min="0" max="2" step="0.05" value="0.6" />
+              </div>
+              <div class="control-group">
+                <label>Directional Intensity</label>
+                <input type="range" id="dir-intensity" min="0" max="3" step="0.05" value="1.0" />
+              </div>
+              <div class="control-group">
+                <label>Directional Color</label>
+                <input type="color" id="dir-color" value="#ffffff" />
+              </div>
+              <h3>Background</h3>
+              <div class="control-group">
+                <label>Background Color</label>
+                <input type="color" id="bg-color" value="#1a1a2e" />
+              </div>
+              <h3>Camera</h3>
+              <div class="control-group">
+                <button id="reset-camera" class="btn btn-small">Reset Camera</button>
+              </div>
+              <div class="control-group cam-setter-row">
+                <label>Position X</label>
+                <input type="number" id="cam-pos-x" step="0.1" value="0" class="num-input" />
+              </div>
+              <div class="control-group cam-setter-row">
+                <label>Position Y</label>
+                <input type="number" id="cam-pos-y" step="0.1" value="1.4" class="num-input" />
+              </div>
+              <div class="control-group cam-setter-row">
+                <label>Position Z</label>
+                <input type="number" id="cam-pos-z" step="0.1" value="1.2" class="num-input" />
+              </div>
+              <div class="control-group cam-setter-row">
+                <label>Rotate X°</label>
+                <input type="number" id="cam-rot-x" step="1" value="0" class="num-input" />
+              </div>
+              <div class="control-group cam-setter-row">
+                <label>Rotate Y°</label>
+                <input type="number" id="cam-rot-y" step="1" value="0" class="num-input" />
+              </div>
+              <div class="control-group cam-setter-row">
+                <label>Rotate Z°</label>
+                <input type="number" id="cam-rot-z" step="1" value="0" class="num-input" />
+              </div>
+            </section>
+            <section id="tab-settings" class="tab-content">
+              <h3>Camera Preview</h3>
+              <div class="control-group">
+                <label class="toggle-label">
+                  <span>Show Camera</span>
+                  <input type="checkbox" id="setting-show-cam" checked />
+                </label>
+              </div>
+              <div class="control-group">
+                <label class="toggle-label">
+                  <span>Show Skeleton</span>
+                  <input type="checkbox" id="setting-show-skeleton" />
+                </label>
+              </div>
+              <h3>Scene</h3>
+              <div class="control-group">
+                <label class="toggle-label">
+                  <span>Show Grid</span>
+                  <input type="checkbox" id="setting-show-grid" checked />
+                </label>
+              </div>
+            </section>
+          </div>
+        </aside>
+      </main>
+    </div>
+  </body>
+</html>
