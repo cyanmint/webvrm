@@ -12,6 +12,11 @@
         <div id="toolbar-actions">
           <label id="load-vrm-label" class="btn" for="vrm-file-input">Load VRM</label>
           <input type="file" id="vrm-file-input" accept=".vrm" />
+          <select id="pose-selector" class="btn">
+            <option value="preset:Default">Default</option>
+            <option value="preset:T-Pose">T-Pose</option>
+            <option value="preset:A-Pose">A-Pose</option>
+          </select>
           <select id="tracking-mode" class="btn">
             <option value="faceOnly">Face Only</option>
             <option value="fullBody">Full Body</option>
@@ -42,6 +47,7 @@
             <button class="tab active" data-tab="expressions">Expressions</button>
             <button class="tab" data-tab="materials">Materials</button>
             <button class="tab" data-tab="scene">Scene</button>
+            <button class="tab" data-tab="settings">Settings</button>
           </div>
           <div id="editor-content">
             <section id="tab-expressions" class="tab-content active">
@@ -72,6 +78,28 @@
               <h3>Camera</h3>
               <div class="control-group">
                 <button id="reset-camera" class="btn btn-small">Reset Camera</button>
+              </div>
+            </section>
+            <section id="tab-settings" class="tab-content">
+              <h3>Camera Preview</h3>
+              <div class="control-group">
+                <label class="toggle-label">
+                  <span>Show Camera</span>
+                  <input type="checkbox" id="setting-show-cam" checked />
+                </label>
+              </div>
+              <div class="control-group">
+                <label class="toggle-label">
+                  <span>Show Skeleton</span>
+                  <input type="checkbox" id="setting-show-skeleton" />
+                </label>
+              </div>
+              <h3>Scene</h3>
+              <div class="control-group">
+                <label class="toggle-label">
+                  <span>Show Grid</span>
+                  <input type="checkbox" id="setting-show-grid" checked />
+                </label>
               </div>
             </section>
           </div>

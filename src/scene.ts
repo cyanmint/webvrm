@@ -8,6 +8,7 @@ export interface SceneContext {
   controls: OrbitControls;
   ambientLight: THREE.AmbientLight;
   directionalLight: THREE.DirectionalLight;
+  grid: THREE.GridHelper;
   clock: THREE.Clock;
 }
 
@@ -42,7 +43,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneContext {
 
   const clock = new THREE.Clock();
 
-  return { scene, camera, renderer, controls, ambientLight, directionalLight, clock };
+  return { scene, camera, renderer, controls, ambientLight, directionalLight, grid, clock };
 }
 
 export function resizeRenderer(ctx: SceneContext, container: HTMLElement): void {

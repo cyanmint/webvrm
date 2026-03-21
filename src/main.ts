@@ -1,10 +1,12 @@
 import './style.css';
+import type { AnimationClip } from 'three';
 import { createScene, resizeRenderer, resetCamera, type SceneContext } from './scene';
-import { loadVRM, loadVRMFromUrl, getCurrentVRM, updateVRM } from './vrm-loader';
+import { loadVRM, loadVRMFromUrl, getCurrentVRM, getCurrentAnimations, getCurrentMixer, updateVRM } from './vrm-loader';
 import { initFaceTracker, detectFace, disposeFaceTracker } from './face-tracker';
 import { applyFaceToVRM, restoreModelPose, resetVRMExpressions } from './vrm-animator';
 import { initPoseTracker, detectPose, disposePoseTracker } from './pose-tracker';
 import { applyPoseToVRM, resetPose } from './pose-animator';
+import { POSE_PRESETS } from './pose-presets';
 import { initSkeletonCanvas, drawFaceSkeleton, drawPoseSkeleton, clearSkeletonCanvas } from './face-skeleton';
 import {
   buildExpressionEditor,
@@ -46,13 +48,26 @@ const fpsCounter = document.getElementById('fps-counter') as HTMLSpanElement;
 const loadingStatus = document.getElementById(
   'loading-status'
 ) as HTMLDivElement;
+const poseSelector = document.getElementById(
+  'pose-selector'
+) as HTMLSelectElement;
+const settingShowCam = document.getElementById(
+  'setting-show-cam'
+) as HTMLInputElement;
+const settingShowSkeleton = document.getElementById(
+  'setting-show-skeleton'
+) as HTMLInputElement;
+const settingShowGrid = document.getElementById(
+  'setting-show-grid'
+) as HTMLInputElement;
 
 // State
 let cameraActive = false;
 let mediaStream: MediaStream | null = null;
 let faceTrackerReady = false;
 let poseTrackerReady = false;
-let skeletonOverlay = false;
+let showCam = true;
+let showSkeleton = false;
 
 type TrackingMode = 'faceOnly' | 'fullBody';
 let trackingMode: TrackingMode = 'faceOnly';
@@ -76,9 +91,10 @@ fileInput.addEventListener('change', async () => {
   toggleCameraBtn.textContent = cameraActive ? 'Stop Camera' : 'Start Camera';
 
   try {
-    const vrm = await loadVRM(file, ctx);
+    const { vrm, animations } = await loadVRM(file, ctx);
     buildExpressionEditor(vrm);
     buildMaterialEditor(vrm);
+    populatePoseSelector(animations);
   } catch (err) {
     console.error('Failed to load VRM:', err);
     alert('Failed to load VRM file. Please ensure it is a valid .vrm file.');
@@ -110,8 +126,8 @@ async function startCamera(): Promise<void> {
     skeletonCanvas.height = videoEl.videoHeight || 480;
     initSkeletonCanvas(skeletonCanvas);
 
-    // Show the cam preview pane
-    camPreviewPane.classList.add('visible');
+    // Show the cam preview pane based on settings
+    updateCamPreviewVisibility();
     updateSkeletonVisibility();
 
     toggleCameraBtn.textContent = 'Initializing...';
@@ -154,8 +170,24 @@ function stopCamera(): void {
   }
 }
 
+function updateCamPreviewVisibility(): void {
+  if (!cameraActive) {
+    camPreviewPane.classList.remove('visible');
+    return;
+  }
+  // If both cam and skeleton are hidden, hide the entire pane
+  if (!showCam && !showSkeleton) {
+    camPreviewPane.classList.remove('visible');
+  } else {
+    camPreviewPane.classList.add('visible');
+  }
+  // Show or hide the video feed (use visibility so the container keeps its
+  // dimensions for the absolutely-positioned skeleton canvas)
+  videoEl.style.visibility = showCam ? 'visible' : 'hidden';
+}
+
 function updateSkeletonVisibility(): void {
-  if (skeletonOverlay) {
+  if (showSkeleton) {
     skeletonCanvas.classList.add('visible');
   } else {
     skeletonCanvas.classList.remove('visible');
@@ -165,9 +197,11 @@ function updateSkeletonVisibility(): void {
 
 // Toggle skeleton overlay on/off
 toggleSkeletonBtn.addEventListener('click', () => {
-  skeletonOverlay = !skeletonOverlay;
-  toggleSkeletonBtn.textContent = skeletonOverlay ? 'Hide Skeleton' : 'Skeleton';
+  showSkeleton = !showSkeleton;
+  settingShowSkeleton.checked = showSkeleton;
+  toggleSkeletonBtn.textContent = showSkeleton ? 'Hide Skeleton' : 'Skeleton';
   updateSkeletonVisibility();
+  updateCamPreviewVisibility();
 });
 
 // Close preview pane (tracking continues, just hides the preview)
@@ -198,6 +232,73 @@ trackingModeSelect.addEventListener('change', async () => {
 // Reset camera button
 resetCameraBtn?.addEventListener('click', () => resetCamera(ctx));
 
+// Pose selector - built-in presets + animations from VRM
+function populatePoseSelector(animations: AnimationClip[]): void {
+  poseSelector.innerHTML = '';
+
+  // Add built-in preset poses (Default, T-Pose, A-Pose)
+  for (const preset of POSE_PRESETS) {
+    const opt = document.createElement('option');
+    opt.value = `preset:${preset.name}`;
+    opt.textContent = preset.name;
+    poseSelector.appendChild(opt);
+  }
+
+  // Add animation clips from the VRM model
+  for (let i = 0; i < animations.length; i++) {
+    const clip = animations[i];
+    const opt = document.createElement('option');
+    opt.value = `anim:${clip.name}`;
+    opt.textContent = clip.name || `Animation ${i + 1}`;
+    poseSelector.appendChild(opt);
+  }
+}
+
+poseSelector.addEventListener('change', () => {
+  const vrm = getCurrentVRM();
+  if (!vrm) return;
+  const mixer = getCurrentMixer();
+  const value = poseSelector.value;
+
+  // Stop any playing animation first
+  mixer?.stopAllAction();
+
+  if (value.startsWith('preset:')) {
+    const presetName = value.slice('preset:'.length);
+    const preset = POSE_PRESETS.find((p) => p.name === presetName);
+    if (preset) {
+      preset.apply(vrm);
+    }
+  } else if (value.startsWith('anim:') && mixer) {
+    const clipName = value.slice('anim:'.length);
+    const animations = getCurrentAnimations();
+    const clip = animations.find((c) => c.name === clipName);
+    if (clip) {
+      const action = mixer.clipAction(clip);
+      action.play();
+    }
+  }
+});
+
+// Settings: Show Camera toggle
+settingShowCam.addEventListener('change', () => {
+  showCam = settingShowCam.checked;
+  updateCamPreviewVisibility();
+});
+
+// Settings: Show Skeleton toggle
+settingShowSkeleton.addEventListener('change', () => {
+  showSkeleton = settingShowSkeleton.checked;
+  toggleSkeletonBtn.textContent = showSkeleton ? 'Hide Skeleton' : 'Skeleton';
+  updateSkeletonVisibility();
+  updateCamPreviewVisibility();
+});
+
+// Settings: Show Grid toggle
+settingShowGrid.addEventListener('change', () => {
+  ctx.grid.visible = settingShowGrid.checked;
+});
+
 // --- Auto-initialization ---
 
 function setLoadingStatus(msg: string): void {
@@ -216,9 +317,10 @@ function setLoadingStatus(msg: string): void {
   setLoadingStatus('Loading model & MediaPipe...');
 
   const vrmPromise = loadVRMFromUrl(DEFAULT_VRM_URL, ctx)
-    .then((vrm) => {
+    .then(({ vrm, animations }) => {
       buildExpressionEditor(vrm);
       buildMaterialEditor(vrm);
+      populatePoseSelector(animations);
     })
     .catch((err) => console.error('Failed to auto-load default VRM:', err));
 
@@ -265,7 +367,7 @@ function animate(): void {
     }
 
     // Skeleton overlay drawing
-    if (skeletonOverlay) {
+    if (showSkeleton) {
       clearSkeletonCanvas(skeletonCanvas);
       if (poseResult && poseResult.landmarks.length > 0) {
         drawPoseSkeleton(skeletonCanvas, poseResult.landmarks);
