@@ -181,8 +181,9 @@ function updateCamPreviewVisibility(): void {
   } else {
     camPreviewPane.classList.add('visible');
   }
-  // Show or hide the video feed
-  videoEl.style.display = showCam ? 'block' : 'none';
+  // Show or hide the video feed (use visibility so the container keeps its
+  // dimensions for the absolutely-positioned skeleton canvas)
+  videoEl.style.visibility = showCam ? 'visible' : 'hidden';
 }
 
 function updateSkeletonVisibility(): void {

@@ -55,10 +55,10 @@ function applyAPose(vrm: VRM): void {
   );
 
   if (leftArm) {
-    leftArm.quaternion.setFromAxisAngle(Z_AXIS, Math.PI / 6);
+    leftArm.quaternion.setFromAxisAngle(Z_AXIS, -Math.PI / 6);
   }
   if (rightArm) {
-    rightArm.quaternion.setFromAxisAngle(Z_AXIS, -Math.PI / 6);
+    rightArm.quaternion.setFromAxisAngle(Z_AXIS, Math.PI / 6);
   }
 }
 
