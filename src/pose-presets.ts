@@ -7,16 +7,14 @@ export interface PosePreset {
 }
 
 /**
- * Restore the model's authored rest pose (whatever the model author defined).
+ * Restore the model's authored rest pose.
  */
 function applyDefault(vrm: VRM): void {
   vrm.humanoid?.resetNormalizedPose();
 }
 
 /**
- * T-Pose: arms fully extended to the sides, legs straight down.
- * In VRM normalized space, identity quaternions already produce a T-pose
- * since normalized bones use T-pose as the reference.
+ * T-Pose: all normalized bones set to identity (arms straight out, legs down).
  */
 function applyTPose(vrm: VRM): void {
   vrm.humanoid?.resetNormalizedPose();
@@ -44,7 +42,7 @@ function applyTPose(vrm: VRM): void {
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
 /**
- * A-Pose: arms angled ~30° down from horizontal (common rest pose).
+ * A-Pose: arms angled ~30° down from horizontal.
  */
 function applyAPose(vrm: VRM): void {
   applyTPose(vrm);
@@ -57,10 +55,10 @@ function applyAPose(vrm: VRM): void {
   );
 
   if (leftArm) {
-    leftArm.quaternion.setFromAxisAngle(Z_AXIS, Math.PI / 6); // +30°
+    leftArm.quaternion.setFromAxisAngle(Z_AXIS, Math.PI / 6);
   }
   if (rightArm) {
-    rightArm.quaternion.setFromAxisAngle(Z_AXIS, -Math.PI / 6); // -30°
+    rightArm.quaternion.setFromAxisAngle(Z_AXIS, -Math.PI / 6);
   }
 }
 

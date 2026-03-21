@@ -1,6 +1,7 @@
 import './style.css';
+import type { AnimationClip } from 'three';
 import { createScene, resizeRenderer, resetCamera, type SceneContext } from './scene';
-import { loadVRM, loadVRMFromUrl, getCurrentVRM, updateVRM } from './vrm-loader';
+import { loadVRM, loadVRMFromUrl, getCurrentVRM, getCurrentAnimations, getCurrentMixer, updateVRM } from './vrm-loader';
 import { initFaceTracker, detectFace, disposeFaceTracker } from './face-tracker';
 import { applyFaceToVRM, restoreModelPose, resetVRMExpressions } from './vrm-animator';
 import { initPoseTracker, detectPose, disposePoseTracker } from './pose-tracker';
@@ -90,9 +91,10 @@ fileInput.addEventListener('change', async () => {
   toggleCameraBtn.textContent = cameraActive ? 'Stop Camera' : 'Start Camera';
 
   try {
-    const vrm = await loadVRM(file, ctx);
+    const { vrm, animations } = await loadVRM(file, ctx);
     buildExpressionEditor(vrm);
     buildMaterialEditor(vrm);
+    populatePoseSelector(animations);
   } catch (err) {
     console.error('Failed to load VRM:', err);
     alert('Failed to load VRM file. Please ensure it is a valid .vrm file.');
@@ -229,13 +231,51 @@ trackingModeSelect.addEventListener('change', async () => {
 // Reset camera button
 resetCameraBtn?.addEventListener('click', () => resetCamera(ctx));
 
-// Pose selector
+// Pose selector - built-in presets + animations from VRM
+function populatePoseSelector(animations: AnimationClip[]): void {
+  poseSelector.innerHTML = '';
+
+  // Add built-in preset poses (Default, T-Pose, A-Pose)
+  for (const preset of POSE_PRESETS) {
+    const opt = document.createElement('option');
+    opt.value = `preset:${preset.name}`;
+    opt.textContent = preset.name;
+    poseSelector.appendChild(opt);
+  }
+
+  // Add animation clips from the VRM model
+  for (let i = 0; i < animations.length; i++) {
+    const clip = animations[i];
+    const opt = document.createElement('option');
+    opt.value = `anim:${clip.name}`;
+    opt.textContent = clip.name || `Animation ${i + 1}`;
+    poseSelector.appendChild(opt);
+  }
+}
+
 poseSelector.addEventListener('change', () => {
   const vrm = getCurrentVRM();
   if (!vrm) return;
-  const preset = POSE_PRESETS.find((p) => p.name === poseSelector.value);
-  if (preset) {
-    preset.apply(vrm);
+  const mixer = getCurrentMixer();
+  const value = poseSelector.value;
+
+  // Stop any playing animation first
+  mixer?.stopAllAction();
+
+  if (value.startsWith('preset:')) {
+    const presetName = value.slice('preset:'.length);
+    const preset = POSE_PRESETS.find((p) => p.name === presetName);
+    if (preset) {
+      preset.apply(vrm);
+    }
+  } else if (value.startsWith('anim:') && mixer) {
+    const clipName = value.slice('anim:'.length);
+    const animations = getCurrentAnimations();
+    const clip = animations.find((c) => c.name === clipName);
+    if (clip) {
+      const action = mixer.clipAction(clip);
+      action.play();
+    }
   }
 });
 
@@ -276,9 +316,10 @@ function setLoadingStatus(msg: string): void {
   setLoadingStatus('Loading model & MediaPipe...');
 
   const vrmPromise = loadVRMFromUrl(DEFAULT_VRM_URL, ctx)
-    .then((vrm) => {
+    .then(({ vrm, animations }) => {
       buildExpressionEditor(vrm);
       buildMaterialEditor(vrm);
+      populatePoseSelector(animations);
     })
     .catch((err) => console.error('Failed to auto-load default VRM:', err));
 

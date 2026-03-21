@@ -3,10 +3,25 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRM, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import type { SceneContext } from './scene';
 
+export interface VRMLoadResult {
+  vrm: VRM;
+  animations: THREE.AnimationClip[];
+}
+
 let currentVRM: VRM | null = null;
+let currentAnimations: THREE.AnimationClip[] = [];
+let currentMixer: THREE.AnimationMixer | null = null;
 
 export function getCurrentVRM(): VRM | null {
   return currentVRM;
+}
+
+export function getCurrentAnimations(): THREE.AnimationClip[] {
+  return currentAnimations;
+}
+
+export function getCurrentMixer(): THREE.AnimationMixer | null {
+  return currentMixer;
 }
 
 /**
@@ -16,12 +31,15 @@ async function loadVRMFromSource(
   url: string,
   ctx: SceneContext,
   revokeUrl: boolean,
-): Promise<VRM> {
+): Promise<VRMLoadResult> {
   // Dispose previous VRM
   if (currentVRM) {
+    currentMixer?.stopAllAction();
+    currentMixer = null;
     VRMUtils.deepDispose(currentVRM.scene);
     ctx.scene.remove(currentVRM.scene);
     currentVRM = null;
+    currentAnimations = [];
   }
 
   try {
@@ -47,8 +65,10 @@ async function loadVRMFromSource(
 
     ctx.scene.add(vrm.scene);
     currentVRM = vrm;
+    currentAnimations = gltf.animations ?? [];
+    currentMixer = new THREE.AnimationMixer(vrm.scene);
 
-    return vrm;
+    return { vrm, animations: currentAnimations };
   } finally {
     if (revokeUrl) {
       URL.revokeObjectURL(url);
@@ -56,7 +76,7 @@ async function loadVRMFromSource(
   }
 }
 
-export async function loadVRM(file: File, ctx: SceneContext): Promise<VRM> {
+export async function loadVRM(file: File, ctx: SceneContext): Promise<VRMLoadResult> {
   const url = URL.createObjectURL(file);
   return loadVRMFromSource(url, ctx, true);
 }
@@ -64,12 +84,15 @@ export async function loadVRM(file: File, ctx: SceneContext): Promise<VRM> {
 export async function loadVRMFromUrl(
   url: string,
   ctx: SceneContext,
-): Promise<VRM> {
+): Promise<VRMLoadResult> {
   return loadVRMFromSource(url, ctx, false);
 }
 
 export function updateVRM(delta: number): void {
   if (currentVRM) {
     currentVRM.update(delta);
+  }
+  if (currentMixer) {
+    currentMixer.update(delta);
   }
 }
