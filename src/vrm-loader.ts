@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRM, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import type { SceneContext } from './scene';
+import { applyStandbyPose } from './vrm-animator';
 
 let currentVRM: VRM | null = null;
 
@@ -47,6 +48,8 @@ async function loadVRMFromSource(
 
     ctx.scene.add(vrm.scene);
     currentVRM = vrm;
+
+    applyStandbyPose(vrm);
 
     return vrm;
   } finally {
