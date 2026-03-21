@@ -23,11 +23,15 @@ const PRESET_EXPRESSION_NAMES: string[] = [
   VRMExpressionPresetName.Neutral,
 ];
 
+// Track expression slider elements so we can update them from the animation loop
+const expressionSliders = new Map<string, { input: HTMLInputElement; valueSpan: HTMLElement }>();
+
 export function buildExpressionEditor(vrm: VRM): void {
   const container = document.getElementById('tab-expressions');
   if (!container) return;
 
   container.innerHTML = '';
+  expressionSliders.clear();
 
   const expr = vrm.expressionManager;
   if (!expr || expr.expressions.length === 0) {
@@ -72,6 +76,8 @@ export function buildExpressionEditor(vrm: VRM): void {
     div.appendChild(label);
     div.appendChild(input);
     container.appendChild(div);
+
+    expressionSliders.set(name, { input, valueSpan });
   }
 
   // Custom expressions
@@ -110,7 +116,24 @@ export function buildExpressionEditor(vrm: VRM): void {
       div.appendChild(label);
       div.appendChild(input);
       container.appendChild(div);
+
+      expressionSliders.set(name, { input, valueSpan });
     }
+  }
+}
+
+/**
+ * Update expression slider positions to reflect current VRM expression values.
+ * Called from the animation loop so sliders track face-tracking changes.
+ */
+export function updateExpressionSliders(vrm: VRM): void {
+  const expr = vrm.expressionManager;
+  if (!expr) return;
+
+  for (const [name, { input, valueSpan }] of expressionSliders) {
+    const val = expr.getValue(name) ?? 0;
+    input.value = val.toFixed(2);
+    valueSpan.textContent = val.toFixed(2);
   }
 }
 

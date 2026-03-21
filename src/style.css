@@ -347,6 +347,61 @@ html, body {
   cursor: pointer;
 }
 
+/* Pose manager */
+.pose-preset-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.pose-toolbar {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pose-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.pose-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-input);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.5rem;
+}
+
+.pose-item-name {
+  font-size: 0.82rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  margin-right: 0.3rem;
+}
+
+.pose-item-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.btn-danger {
+  color: var(--accent);
+}
+
+.btn-danger:hover {
+  background: var(--accent);
+  color: var(--text);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   #workspace {
