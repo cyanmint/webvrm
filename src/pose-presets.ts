@@ -42,7 +42,7 @@ function applyTPose(vrm: VRM): void {
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
 /**
- * A-Pose: arms angled ~30° down from horizontal.
+ * A-Pose: arms angled ~60° down from horizontal.
  */
 function applyAPose(vrm: VRM): void {
   applyTPose(vrm);
@@ -55,10 +55,10 @@ function applyAPose(vrm: VRM): void {
   );
 
   if (leftArm) {
-    leftArm.quaternion.setFromAxisAngle(Z_AXIS, -Math.PI / 6);
+    leftArm.quaternion.setFromAxisAngle(Z_AXIS, -Math.PI / 3);
   }
   if (rightArm) {
-    rightArm.quaternion.setFromAxisAngle(Z_AXIS, Math.PI / 6);
+    rightArm.quaternion.setFromAxisAngle(Z_AXIS, Math.PI / 3);
   }
 }
 
