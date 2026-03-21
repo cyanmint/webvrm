@@ -128,7 +128,6 @@ function onPointerMove(e: PointerEvent): void {
   // Get camera right and up vectors for intuitive rotation
   const camRight = new THREE.Vector3();
   const camUp = new THREE.Vector3();
-  _camera.getWorldDirection(new THREE.Vector3());
   camRight.setFromMatrixColumn(_camera.matrixWorld, 0);
   camUp.setFromMatrixColumn(_camera.matrixWorld, 1);
 

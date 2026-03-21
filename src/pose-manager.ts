@@ -122,8 +122,7 @@ function renderPoseList(): void {
     return;
   }
 
-  for (let i = 0; i < savedPoses.length; i++) {
-    const pose = savedPoses[i];
+  for (const pose of savedPoses) {
     const item = document.createElement('div');
     item.className = 'pose-item';
 
@@ -146,9 +145,12 @@ function renderPoseList(): void {
     deleteBtn.className = 'btn btn-small btn-danger';
     deleteBtn.textContent = '✕';
     deleteBtn.addEventListener('click', () => {
-      savedPoses.splice(i, 1);
-      savePosesToStorage(savedPoses);
-      renderPoseList();
+      const idx = savedPoses.indexOf(pose);
+      if (idx !== -1) {
+        savedPoses.splice(idx, 1);
+        savePosesToStorage(savedPoses);
+        renderPoseList();
+      }
     });
 
     actions.appendChild(applyBtn);
