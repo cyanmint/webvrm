@@ -24,9 +24,12 @@ function clamp(v: number, min = 0, max = 1): number {
 }
 
 /**
- * Restore the model's own authored rest pose by resetting all normalized
- * bone transforms to their initial state. Works correctly for both VRM 0.0
- * and VRM 1.0 models without applying any hardcoded rotations.
+ * Restore the model's own authored standby pose by resetting all normalized
+ * bone transforms to identity. three-vrm's VRMHumanoidRig.update() then
+ * applies each bone's original local quaternion (stored from the glTF file)
+ * to the raw skeleton, so the model displays exactly as the author designed it.
+ * This works correctly for both VRM 0.0 and VRM 1.0 models without any
+ * hardcoded rotations.
  */
 export function restoreModelPose(vrm: VRM): void {
   vrm.humanoid?.resetNormalizedPose();
