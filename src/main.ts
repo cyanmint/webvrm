@@ -1,14 +1,14 @@
 import './style.css';
 import type { AnimationClip } from 'three';
-import { createScene, resizeRenderer, resetCamera, type SceneContext } from './scene';
+import { createScene, resizeRenderer, resetCamera, setCameraMode, type SceneContext, type CameraMode } from './scene';
 import { loadVRM, loadVRMFromUrl, getCurrentVRM, getCurrentAnimations, getCurrentMixer, updateVRM } from './vrm-loader';
 import { initFaceTracker, detectFace, disposeFaceTracker } from './face-tracker';
 import { applyFaceToVRM, restoreModelPose } from './vrm-animator';
 import { initPoseTracker, detectPose, disposePoseTracker } from './pose-tracker';
 import { applyPoseToVRM, resetPose } from './pose-animator';
 import { POSE_PRESETS } from './pose-presets';
-import { initBoneDragger, setBoneDraggerVRM, setBoneDraggerEnabled } from './bone-dragger';
-import { buildPoseManagerPanel } from './pose-manager';
+import { initBoneSelector, setBoneSelectorVRM, setBoneSelectorEnabled, onBoneSelected } from './bone-selector';
+import { buildPoseManagerPanel, highlightBoneRow, refreshBoneSliders } from './pose-manager';
 import { initSkeletonCanvas, drawFaceSkeleton, drawPoseSkeleton, clearSkeletonCanvas } from './face-skeleton';
 import {
   buildExpressionEditor,
@@ -63,6 +63,9 @@ const settingShowSkeleton = document.getElementById(
 const settingShowGrid = document.getElementById(
   'setting-show-grid'
 ) as HTMLInputElement;
+const cameraModeBtn = document.getElementById(
+  'camera-mode-btn'
+) as HTMLButtonElement;
 
 // State
 let cameraActive = false;
@@ -83,9 +86,21 @@ resizeRenderer(ctx, viewportContainer);
 setupTabs();
 setupSceneEditor(ctx);
 
-// Initialize bone dragger for manual posing
-initBoneDragger(canvas, ctx.camera, ctx.controls);
-setBoneDraggerEnabled(true);
+// Initialize bone selector for click-to-select posing
+initBoneSelector(canvas, ctx.camera);
+setBoneSelectorEnabled(true);
+onBoneSelected((boneName) => {
+  highlightBoneRow(boneName);
+  if (boneName) refreshBoneSliders(boneName);
+});
+
+// Camera mode toggle
+let cameraMode: CameraMode = 'rotate';
+cameraModeBtn.addEventListener('click', () => {
+  cameraMode = cameraMode === 'rotate' ? 'pan' : 'rotate';
+  setCameraMode(ctx, cameraMode);
+  cameraModeBtn.textContent = cameraMode === 'rotate' ? '🔄 Rotate' : '✋ Pan';
+});
 
 // Build pose manager panel
 const posesTab = document.getElementById('tab-poses');
@@ -106,7 +121,7 @@ fileInput.addEventListener('change', async () => {
     buildExpressionEditor(vrm);
     buildMaterialEditor(vrm);
     populatePoseSelector(animations);
-    setBoneDraggerVRM(vrm);
+    setBoneSelectorVRM(vrm);
     if (posesTab) buildPoseManagerPanel(posesTab);
   } catch (err) {
     console.error('Failed to load VRM:', err);
@@ -157,7 +172,7 @@ async function startCamera(): Promise<void> {
 
     cameraActive = true;
     toggleCameraBtn.textContent = 'Stop Camera';
-    setBoneDraggerEnabled(false); // disable manual posing while tracking
+    setBoneSelectorEnabled(false); // disable manual posing while tracking
   } catch (err) {
     console.error('Failed to start camera:', err);
     alert(
@@ -176,9 +191,9 @@ function stopCamera(): void {
   videoEl.srcObject = null;
   clearSkeletonCanvas(skeletonCanvas);
   toggleCameraBtn.textContent = 'Start Camera';
-  setBoneDraggerEnabled(true); // re-enable manual posing
+  setBoneSelectorEnabled(true); // re-enable manual posing
 
-  // Freeze the current pose & expressions instead of resetting them
+  // Pose and expressions are intentionally left unchanged (frozen)
 }
 
 function updateCamPreviewVisibility(): void {
@@ -332,7 +347,7 @@ function setLoadingStatus(msg: string): void {
       buildExpressionEditor(vrm);
       buildMaterialEditor(vrm);
       populatePoseSelector(animations);
-      setBoneDraggerVRM(vrm);
+      setBoneSelectorVRM(vrm);
       if (posesTab) buildPoseManagerPanel(posesTab);
     })
     .catch((err) => console.error('Failed to auto-load default VRM:', err));

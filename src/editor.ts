@@ -246,6 +246,8 @@ export function buildMaterialEditor(vrm: VRM): void {
   });
 }
 
+let camUpdateInterval: number | null = null;
+
 export function setupSceneEditor(ctx: SceneContext): void {
   const ambientInput = document.getElementById(
     'ambient-intensity'
@@ -275,6 +277,60 @@ export function setupSceneEditor(ctx: SceneContext): void {
   bgColorInput?.addEventListener('input', () => {
     (ctx.scene.background as THREE.Color).set(bgColorInput.value);
   });
+
+  // Camera setter controls
+  const camX = document.getElementById('cam-pos-x') as HTMLInputElement | null;
+  const camY = document.getElementById('cam-pos-y') as HTMLInputElement | null;
+  const camZ = document.getElementById('cam-pos-z') as HTMLInputElement | null;
+  const camRX = document.getElementById('cam-rot-x') as HTMLInputElement | null;
+  const camRY = document.getElementById('cam-rot-y') as HTMLInputElement | null;
+  const camRZ = document.getElementById('cam-rot-z') as HTMLInputElement | null;
+
+  function updateCamInputs(): void {
+    if (camX) camX.value = ctx.camera.position.x.toFixed(2);
+    if (camY) camY.value = ctx.camera.position.y.toFixed(2);
+    if (camZ) camZ.value = ctx.camera.position.z.toFixed(2);
+    const euler = new THREE.Euler().setFromQuaternion(ctx.camera.quaternion, 'YXZ');
+    const rad2deg = 180 / Math.PI;
+    if (camRX) camRX.value = (euler.x * rad2deg).toFixed(1);
+    if (camRY) camRY.value = (euler.y * rad2deg).toFixed(1);
+    if (camRZ) camRZ.value = (euler.z * rad2deg).toFixed(1);
+  }
+
+  function applyCamPosition(): void {
+    if (!camX || !camY || !camZ) return;
+    ctx.camera.position.set(
+      parseFloat(camX.value) || 0,
+      parseFloat(camY.value) || 0,
+      parseFloat(camZ.value) || 0,
+    );
+    ctx.controls.update();
+  }
+
+  function applyCamRotation(): void {
+    if (!camRX || !camRY || !camRZ) return;
+    const deg2rad = Math.PI / 180;
+    const rx = (parseFloat(camRX.value) || 0) * deg2rad;
+    const ry = (parseFloat(camRY.value) || 0) * deg2rad;
+    const rz = (parseFloat(camRZ.value) || 0) * deg2rad;
+    // Compute look target from camera rotation
+    const dir = new THREE.Vector3(0, 0, -1).applyEuler(
+      new THREE.Euler(rx, ry, rz, 'YXZ'),
+    );
+    ctx.controls.target.copy(ctx.camera.position).add(dir);
+    ctx.controls.update();
+  }
+
+  camX?.addEventListener('change', applyCamPosition);
+  camY?.addEventListener('change', applyCamPosition);
+  camZ?.addEventListener('change', applyCamPosition);
+  camRX?.addEventListener('change', applyCamRotation);
+  camRY?.addEventListener('change', applyCamRotation);
+  camRZ?.addEventListener('change', applyCamRotation);
+
+  // Periodically update camera input fields to reflect orbit control changes
+  if (camUpdateInterval !== null) clearInterval(camUpdateInterval);
+  camUpdateInterval = window.setInterval(updateCamInputs, 500);
 }
 
 export function setupTabs(): void {

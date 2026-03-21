@@ -59,3 +59,26 @@ export function resetCamera(ctx: SceneContext): void {
   ctx.controls.target.set(0, 1.2, 0);
   ctx.controls.update();
 }
+
+export type CameraMode = 'rotate' | 'pan';
+
+/**
+ * Switch between orbit-rotate and pan camera modes.
+ * In 'rotate' mode (default): left-click rotates around target.
+ * In 'pan' mode: left-click pans the camera.
+ */
+export function setCameraMode(ctx: SceneContext, mode: CameraMode): void {
+  if (mode === 'pan') {
+    ctx.controls.mouseButtons = {
+      LEFT: THREE.MOUSE.PAN,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: THREE.MOUSE.ROTATE,
+    };
+  } else {
+    ctx.controls.mouseButtons = {
+      LEFT: THREE.MOUSE.ROTATE,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: THREE.MOUSE.PAN,
+    };
+  }
+}

@@ -1,14 +1,18 @@
+import * as THREE from 'three';
 import { VRM, VRMHumanBoneName } from '@pixiv/three-vrm';
 import { getCurrentVRM } from './vrm-loader';
 import { POSE_PRESETS } from './pose-presets';
+import { POSEABLE_BONES, selectBoneByName } from './bone-selector';
 
 /**
  * Pose Manager: save, load, import, and export VRM poses.
- * Poses include bone rotations and expression values.
+ * Pose Detail: per-bone rotateX/Y/Z sliders.
  * Stored in localStorage for persistence across sessions.
  */
 
 const STORAGE_KEY = 'webvrm-saved-poses';
+const RAD2DEG = 180 / Math.PI;
+const DEG2RAD = Math.PI / 180;
 
 export interface SavedPose {
   name: string;
@@ -16,35 +20,11 @@ export interface SavedPose {
   expressions: Record<string, number>;
 }
 
-/** Bones we capture/restore */
-const CAPTURABLE_BONES: VRMHumanBoneName[] = [
-  'hips' as VRMHumanBoneName,
-  'spine' as VRMHumanBoneName,
-  'chest' as VRMHumanBoneName,
-  'upperChest' as VRMHumanBoneName,
-  'neck' as VRMHumanBoneName,
-  'head' as VRMHumanBoneName,
-  'leftUpperArm' as VRMHumanBoneName,
-  'leftLowerArm' as VRMHumanBoneName,
-  'leftHand' as VRMHumanBoneName,
-  'rightUpperArm' as VRMHumanBoneName,
-  'rightLowerArm' as VRMHumanBoneName,
-  'rightHand' as VRMHumanBoneName,
-  'leftUpperLeg' as VRMHumanBoneName,
-  'leftLowerLeg' as VRMHumanBoneName,
-  'leftFoot' as VRMHumanBoneName,
-  'rightUpperLeg' as VRMHumanBoneName,
-  'rightLowerLeg' as VRMHumanBoneName,
-  'rightFoot' as VRMHumanBoneName,
-  'leftShoulder' as VRMHumanBoneName,
-  'rightShoulder' as VRMHumanBoneName,
-];
-
 /** Capture current pose from the VRM model */
 export function capturePose(vrm: VRM, name: string): SavedPose {
   const bones: Record<string, [number, number, number, number]> = {};
 
-  for (const boneName of CAPTURABLE_BONES) {
+  for (const boneName of POSEABLE_BONES) {
     const bone = vrm.humanoid?.getNormalizedBoneNode(boneName);
     if (bone) {
       const q = bone.quaternion;
@@ -67,10 +47,8 @@ export function capturePose(vrm: VRM, name: string): SavedPose {
 
 /** Apply a saved pose to the VRM model */
 export function applyPose(vrm: VRM, pose: SavedPose): void {
-  // Reset to default first
   vrm.humanoid?.resetNormalizedPose();
 
-  // Apply bone rotations
   for (const [boneName, quat] of Object.entries(pose.bones)) {
     const bone = vrm.humanoid?.getNormalizedBoneNode(
       boneName as VRMHumanBoneName,
@@ -80,7 +58,6 @@ export function applyPose(vrm: VRM, pose: SavedPose): void {
     }
   }
 
-  // Apply expressions
   if (vrm.expressionManager) {
     vrm.expressionManager.resetValues();
     for (const [name, val] of Object.entries(pose.expressions)) {
@@ -89,7 +66,7 @@ export function applyPose(vrm: VRM, pose: SavedPose): void {
   }
 }
 
-// --- localStorage persistence ---
+// ─── localStorage persistence ───────────────────────────────
 
 function loadSavedPoses(): SavedPose[] {
   try {
@@ -105,10 +82,27 @@ function savePosesToStorage(poses: SavedPose[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(poses));
 }
 
-// --- UI ---
+// ─── UI State ───────────────────────────────────────────────
 
 let poseListEl: HTMLElement | null = null;
 let savedPoses: SavedPose[] = [];
+let poseDetailEl: HTMLElement | null = null;
+
+// Track per-bone slider elements
+const boneSliders = new Map<
+  string,
+  {
+    rx: HTMLInputElement;
+    ry: HTMLInputElement;
+    rz: HTMLInputElement;
+    rxVal: HTMLElement;
+    ryVal: HTMLElement;
+    rzVal: HTMLElement;
+    row: HTMLElement;
+  }
+>();
+
+// ─── Saved Pose List UI ─────────────────────────────────────
 
 function renderPoseList(): void {
   if (!poseListEl) return;
@@ -138,7 +132,10 @@ function renderPoseList(): void {
     applyBtn.textContent = 'Apply';
     applyBtn.addEventListener('click', () => {
       const vrm = getCurrentVRM();
-      if (vrm) applyPose(vrm, pose);
+      if (vrm) {
+        applyPose(vrm, pose);
+        refreshAllBoneSliders();
+      }
     });
 
     const deleteBtn = document.createElement('button');
@@ -201,7 +198,6 @@ function importPoses(): void {
       try {
         const imported = JSON.parse(reader.result as string) as SavedPose[];
         if (!Array.isArray(imported)) throw new Error('invalid');
-        // Validate structure
         for (const p of imported) {
           if (typeof p.name !== 'string' || typeof p.bones !== 'object') {
             throw new Error('invalid pose format');
@@ -218,6 +214,159 @@ function importPoses(): void {
   });
   input.click();
 }
+
+// ─── Pose Detail (per-bone rotation sliders) ────────────────
+
+function buildPoseDetail(container: HTMLElement): void {
+  poseDetailEl = document.createElement('div');
+  poseDetailEl.className = 'pose-detail';
+
+  const heading = document.createElement('h3');
+  heading.textContent = 'Bone Rotations';
+  poseDetailEl.appendChild(heading);
+
+  const hint = document.createElement('p');
+  hint.className = 'pose-detail-hint';
+  hint.textContent = 'Click a bone on the model or a name below to select it.';
+  poseDetailEl.appendChild(hint);
+
+  boneSliders.clear();
+
+  for (const boneName of POSEABLE_BONES) {
+    const row = document.createElement('div');
+    row.className = 'bone-row';
+    row.dataset.bone = boneName;
+
+    const nameBtn = document.createElement('button');
+    nameBtn.className = 'bone-name-btn';
+    nameBtn.textContent = boneName;
+    nameBtn.addEventListener('click', () => {
+      selectBoneByName(boneName);
+      highlightBoneRow(boneName);
+    });
+    row.appendChild(nameBtn);
+
+    const slidersDiv = document.createElement('div');
+    slidersDiv.className = 'bone-sliders';
+
+    const { slider: rx, valSpan: rxVal } = createRotationSlider('X', boneName);
+    const { slider: ry, valSpan: ryVal } = createRotationSlider('Y', boneName);
+    const { slider: rz, valSpan: rzVal } = createRotationSlider('Z', boneName);
+
+    slidersDiv.appendChild(rx.parentElement!);
+    slidersDiv.appendChild(ry.parentElement!);
+    slidersDiv.appendChild(rz.parentElement!);
+    row.appendChild(slidersDiv);
+
+    poseDetailEl.appendChild(row);
+
+    boneSliders.set(boneName, {
+      rx, ry, rz, rxVal, ryVal, rzVal, row,
+    });
+  }
+
+  container.appendChild(poseDetailEl);
+}
+
+function createRotationSlider(
+  axis: string,
+  boneName: string,
+): { slider: HTMLInputElement; valSpan: HTMLElement } {
+  const wrap = document.createElement('div');
+  wrap.className = 'bone-slider-row';
+
+  const label = document.createElement('label');
+  const colors: Record<string, string> = { X: '#ff4444', Y: '#44ff44', Z: '#4444ff' };
+  label.innerHTML = `<span style="color:${colors[axis]}">${axis}</span>`;
+  const valSpan = document.createElement('span');
+  valSpan.className = 'range-value';
+  valSpan.textContent = '0°';
+  label.appendChild(valSpan);
+
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = '-180';
+  slider.max = '180';
+  slider.step = '1';
+  slider.value = '0';
+
+  slider.addEventListener('input', () => {
+    applyBoneRotation(boneName);
+    valSpan.textContent = `${slider.value}°`;
+  });
+
+  wrap.appendChild(label);
+  wrap.appendChild(slider);
+
+  return { slider, valSpan };
+}
+
+function applyBoneRotation(boneName: string): void {
+  const vrm = getCurrentVRM();
+  if (!vrm) return;
+
+  const entry = boneSliders.get(boneName);
+  if (!entry) return;
+
+  const bone = vrm.humanoid?.getNormalizedBoneNode(boneName as VRMHumanBoneName);
+  if (!bone) return;
+
+  const rx = parseFloat(entry.rx.value) * DEG2RAD;
+  const ry = parseFloat(entry.ry.value) * DEG2RAD;
+  const rz = parseFloat(entry.rz.value) * DEG2RAD;
+
+  const euler = new THREE.Euler(rx, ry, rz, 'XYZ');
+  bone.quaternion.setFromEuler(euler);
+}
+
+/**
+ * Highlight a specific bone row in the panel.
+ */
+export function highlightBoneRow(boneName: string | null): void {
+  for (const [name, entry] of boneSliders) {
+    if (name === boneName) {
+      entry.row.classList.add('bone-row-selected');
+      entry.row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    } else {
+      entry.row.classList.remove('bone-row-selected');
+    }
+  }
+}
+
+/**
+ * Refresh slider values to match the current bone quaternions.
+ */
+export function refreshBoneSliders(boneName: string): void {
+  const vrm = getCurrentVRM();
+  if (!vrm) return;
+  const entry = boneSliders.get(boneName);
+  if (!entry) return;
+  const bone = vrm.humanoid?.getNormalizedBoneNode(boneName as VRMHumanBoneName);
+  if (!bone) return;
+
+  const euler = new THREE.Euler().setFromQuaternion(bone.quaternion, 'XYZ');
+  const rx = Math.round(euler.x * RAD2DEG);
+  const ry = Math.round(euler.y * RAD2DEG);
+  const rz = Math.round(euler.z * RAD2DEG);
+
+  entry.rx.value = String(rx);
+  entry.ry.value = String(ry);
+  entry.rz.value = String(rz);
+  entry.rxVal.textContent = `${rx}°`;
+  entry.ryVal.textContent = `${ry}°`;
+  entry.rzVal.textContent = `${rz}°`;
+}
+
+/**
+ * Refresh all bone sliders from current model state.
+ */
+export function refreshAllBoneSliders(): void {
+  for (const boneName of POSEABLE_BONES) {
+    refreshBoneSliders(boneName);
+  }
+}
+
+// ─── Main Build Function ────────────────────────────────────
 
 /**
  * Build the Poses tab UI inside the given container element.
@@ -239,7 +388,10 @@ export function buildPoseManagerPanel(container: HTMLElement): void {
     btn.textContent = preset.name;
     btn.addEventListener('click', () => {
       const vrm = getCurrentVRM();
-      if (vrm) preset.apply(vrm);
+      if (vrm) {
+        preset.apply(vrm);
+        refreshAllBoneSliders();
+      }
     });
     presetGrid.appendChild(btn);
   }
@@ -250,7 +402,6 @@ export function buildPoseManagerPanel(container: HTMLElement): void {
   savedHeading.textContent = 'Saved Poses';
   container.appendChild(savedHeading);
 
-  // Action buttons
   const toolbar = document.createElement('div');
   toolbar.className = 'pose-toolbar';
 
@@ -274,12 +425,16 @@ export function buildPoseManagerPanel(container: HTMLElement): void {
   toolbar.appendChild(exportBtn);
   container.appendChild(toolbar);
 
-  // Pose list
   poseListEl = document.createElement('div');
   poseListEl.className = 'pose-list';
   container.appendChild(poseListEl);
 
-  // Load from storage
   savedPoses = loadSavedPoses();
   renderPoseList();
+
+  // Pose detail (per-bone sliders)
+  buildPoseDetail(container);
+
+  // Initialize sliders from current model state
+  refreshAllBoneSliders();
 }

@@ -402,6 +402,95 @@ html, body {
   color: var(--text);
 }
 
+/* Pose detail - bone rotation sliders */
+.pose-detail-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.bone-row {
+  background: var(--bg-input);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.4rem;
+  margin-bottom: 0.3rem;
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.bone-row-selected {
+  border-color: var(--accent);
+}
+
+.bone-name-btn {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  padding: 0.15rem 0;
+  margin-bottom: 0.15rem;
+}
+
+.bone-name-btn:hover {
+  color: var(--accent);
+}
+
+.bone-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.bone-slider-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.bone-slider-row label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 0;
+}
+
+.bone-slider-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  height: 14px;
+}
+
+/* Camera setter */
+.cam-setter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cam-setter-row label {
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.num-input {
+  width: 100%;
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.25rem 0.4rem;
+  font-size: 0.8rem;
+}
+
+.num-input:focus {
+  outline: 1px solid var(--accent);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   #workspace {
