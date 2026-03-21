@@ -161,7 +161,7 @@ function setBone(
 }
 
 /**
- * Reset body bones controlled by pose tracking back to identity,
+ * Reset body bones controlled by pose tracking back to the model's rest pose,
  * and clear smoothing state.
  */
 export function resetPose(vrm: VRM): void {
@@ -179,12 +179,21 @@ export function resetPose(vrm: VRM): void {
     'rightUpperLeg',
     'rightLowerLeg',
   ];
+
+  // Read the model's normalized rest pose so we restore authored rotations
+  const restPose = vrm.humanoid.normalizedRestPose;
+
   for (const name of bonesToReset) {
     const bone = vrm.humanoid.getNormalizedBoneNode(
       name as VRMHumanBoneName
     );
     if (bone) {
-      bone.quaternion.identity();
+      const rest = restPose[name as VRMHumanBoneName];
+      if (rest?.rotation) {
+        bone.quaternion.fromArray(rest.rotation);
+      } else {
+        bone.quaternion.identity();
+      }
     }
   }
 }

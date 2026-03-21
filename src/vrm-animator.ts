@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { VRM, VRMExpressionPresetName, VRMHumanBoneName } from '@pixiv/three-vrm';
+import { VRM, VRMExpressionPresetName } from '@pixiv/three-vrm';
 import type { FaceTrackingResult } from './face-tracker';
 
 /**
@@ -24,35 +24,12 @@ function clamp(v: number, min = 0, max = 1): number {
 }
 
 /**
- * Natural resting pose rotations (in radians) for body bones not tracked by
- * face capture. Moves the model from T-pose into a relaxed standby posture
- * with arms lowered at the sides.
+ * Restore the model's own authored rest pose by resetting all normalized
+ * bone transforms to their initial state. Works correctly for both VRM 0.0
+ * and VRM 1.0 models without applying any hardcoded rotations.
  */
-const STANDBY_POSE: Partial<Record<VRMHumanBoneName, { x: number; y: number; z: number }>> = {
-  // Arms down: rotate upper arms ~65° downward from T-pose
-  leftUpperArm: { x: 0, y: 0, z: 1.15 },
-  rightUpperArm: { x: 0, y: 0, z: -1.15 },
-  // Slight forearm bend inward
-  leftLowerArm: { x: 0, y: 0, z: 0.15 },
-  rightLowerArm: { x: 0, y: 0, z: -0.15 },
-  // Slight shoulder shrug
-  leftShoulder: { x: 0, y: 0, z: 0.05 },
-  rightShoulder: { x: 0, y: 0, z: -0.05 },
-};
-
-/**
- * Apply a natural standby pose to the VRM model so that untracked body parts
- * (arms, shoulders) rest in a relaxed position instead of T-pose.
- */
-export function applyStandbyPose(vrm: VRM): void {
-  if (!vrm.humanoid) return;
-
-  for (const [boneName, rot] of Object.entries(STANDBY_POSE)) {
-    const bone = vrm.humanoid.getNormalizedBoneNode(boneName as VRMHumanBoneName);
-    if (bone && rot) {
-      bone.quaternion.setFromEuler(new THREE.Euler(rot.x, rot.y, rot.z));
-    }
-  }
+export function restoreModelPose(vrm: VRM): void {
+  vrm.humanoid?.resetNormalizedPose();
 }
 
 export function applyFaceToVRM(
@@ -160,6 +137,6 @@ export function resetVRMExpressions(vrm: VRM): void {
     vrm.expressionManager.resetValues();
   }
   smoothedValues.clear();
-  // Re-apply standby pose so the model doesn't snap back to T-pose
-  applyStandbyPose(vrm);
+  // Restore model's authored rest pose
+  restoreModelPose(vrm);
 }

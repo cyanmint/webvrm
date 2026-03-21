@@ -1,8 +1,8 @@
 import './style.css';
 import { createScene, resizeRenderer, resetCamera, type SceneContext } from './scene';
-import { loadVRM, getCurrentVRM, updateVRM } from './vrm-loader';
+import { loadVRM, loadVRMFromUrl, getCurrentVRM, updateVRM } from './vrm-loader';
 import { initFaceTracker, detectFace, disposeFaceTracker } from './face-tracker';
-import { applyFaceToVRM, applyStandbyPose, resetVRMExpressions } from './vrm-animator';
+import { applyFaceToVRM, restoreModelPose, resetVRMExpressions } from './vrm-animator';
 import { initPoseTracker, detectPose, disposePoseTracker } from './pose-tracker';
 import { applyPoseToVRM, resetPose } from './pose-animator';
 import { initSkeletonCanvas, drawFaceSkeleton, drawPoseSkeleton, clearSkeletonCanvas } from './face-skeleton';
@@ -12,6 +12,9 @@ import {
   setupSceneEditor,
   setupTabs,
 } from './editor';
+
+const DEFAULT_VRM_URL =
+  'https://github.com/cyanmint/webvrm/releases/download/assets/cyanmint.vrm';
 
 // DOM elements
 const canvas = document.getElementById('three-canvas') as HTMLCanvasElement;
@@ -40,6 +43,9 @@ const resetCameraBtn = document.getElementById(
   'reset-camera'
 ) as HTMLButtonElement;
 const fpsCounter = document.getElementById('fps-counter') as HTMLSpanElement;
+const loadingStatus = document.getElementById(
+  'loading-status'
+) as HTMLDivElement;
 
 // State
 let cameraActive = false;
@@ -184,13 +190,48 @@ trackingModeSelect.addEventListener('change', async () => {
     const vrm = getCurrentVRM();
     if (vrm) {
       resetPose(vrm);
-      applyStandbyPose(vrm);
+      restoreModelPose(vrm);
     }
   }
 });
 
 // Reset camera button
 resetCameraBtn?.addEventListener('click', () => resetCamera(ctx));
+
+// --- Auto-initialization ---
+
+function setLoadingStatus(msg: string): void {
+  if (loadingStatus) {
+    if (msg) {
+      loadingStatus.textContent = msg;
+      loadingStatus.classList.add('visible');
+    } else {
+      loadingStatus.classList.remove('visible');
+    }
+  }
+}
+
+// Auto-load default VRM and pre-initialize MediaPipe in parallel
+(async () => {
+  setLoadingStatus('Loading model & MediaPipe...');
+
+  const vrmPromise = loadVRMFromUrl(DEFAULT_VRM_URL, ctx)
+    .then((vrm) => {
+      buildExpressionEditor(vrm);
+      buildMaterialEditor(vrm);
+    })
+    .catch((err) => console.error('Failed to auto-load default VRM:', err));
+
+  const mediapipePromise = initFaceTracker()
+    .then(() => {
+      faceTrackerReady = true;
+    })
+    .catch((err) => console.error('Failed to pre-init face tracker:', err));
+
+  await Promise.all([vrmPromise, mediapipePromise]);
+
+  setLoadingStatus('');
+})();
 
 // Animation loop
 let frameCount = 0;

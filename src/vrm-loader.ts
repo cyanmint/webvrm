@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRM, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import type { SceneContext } from './scene';
-import { applyStandbyPose } from './vrm-animator';
 
 let currentVRM: VRM | null = null;
 
@@ -10,15 +9,20 @@ export function getCurrentVRM(): VRM | null {
   return currentVRM;
 }
 
-export async function loadVRM(file: File, ctx: SceneContext): Promise<VRM> {
+/**
+ * Core VRM loading logic shared by file and URL loaders.
+ */
+async function loadVRMFromSource(
+  url: string,
+  ctx: SceneContext,
+  revokeUrl: boolean,
+): Promise<VRM> {
   // Dispose previous VRM
   if (currentVRM) {
     VRMUtils.deepDispose(currentVRM.scene);
     ctx.scene.remove(currentVRM.scene);
     currentVRM = null;
   }
-
-  const url = URL.createObjectURL(file);
 
   try {
     const loader = new GLTFLoader();
@@ -44,13 +48,24 @@ export async function loadVRM(file: File, ctx: SceneContext): Promise<VRM> {
     ctx.scene.add(vrm.scene);
     currentVRM = vrm;
 
-    // Apply natural standby pose instead of T-pose
-    applyStandbyPose(vrm);
-
     return vrm;
   } finally {
-    URL.revokeObjectURL(url);
+    if (revokeUrl) {
+      URL.revokeObjectURL(url);
+    }
   }
+}
+
+export async function loadVRM(file: File, ctx: SceneContext): Promise<VRM> {
+  const url = URL.createObjectURL(file);
+  return loadVRMFromSource(url, ctx, true);
+}
+
+export async function loadVRMFromUrl(
+  url: string,
+  ctx: SceneContext,
+): Promise<VRM> {
+  return loadVRMFromSource(url, ctx, false);
 }
 
 export function updateVRM(delta: number): void {
