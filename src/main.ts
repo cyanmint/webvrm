@@ -5,6 +5,7 @@ import { initFaceTracker, detectFace, disposeFaceTracker } from './face-tracker'
 import { applyFaceToVRM, restoreModelPose, resetVRMExpressions } from './vrm-animator';
 import { initPoseTracker, detectPose, disposePoseTracker } from './pose-tracker';
 import { applyPoseToVRM, resetPose } from './pose-animator';
+import { POSE_PRESETS } from './pose-presets';
 import { initSkeletonCanvas, drawFaceSkeleton, drawPoseSkeleton, clearSkeletonCanvas } from './face-skeleton';
 import {
   buildExpressionEditor,
@@ -46,13 +47,26 @@ const fpsCounter = document.getElementById('fps-counter') as HTMLSpanElement;
 const loadingStatus = document.getElementById(
   'loading-status'
 ) as HTMLDivElement;
+const poseSelector = document.getElementById(
+  'pose-selector'
+) as HTMLSelectElement;
+const settingShowCam = document.getElementById(
+  'setting-show-cam'
+) as HTMLInputElement;
+const settingShowSkeleton = document.getElementById(
+  'setting-show-skeleton'
+) as HTMLInputElement;
+const settingShowGrid = document.getElementById(
+  'setting-show-grid'
+) as HTMLInputElement;
 
 // State
 let cameraActive = false;
 let mediaStream: MediaStream | null = null;
 let faceTrackerReady = false;
 let poseTrackerReady = false;
-let skeletonOverlay = false;
+let showCam = true;
+let showSkeleton = false;
 
 type TrackingMode = 'faceOnly' | 'fullBody';
 let trackingMode: TrackingMode = 'faceOnly';
@@ -110,8 +124,8 @@ async function startCamera(): Promise<void> {
     skeletonCanvas.height = videoEl.videoHeight || 480;
     initSkeletonCanvas(skeletonCanvas);
 
-    // Show the cam preview pane
-    camPreviewPane.classList.add('visible');
+    // Show the cam preview pane based on settings
+    updateCamPreviewVisibility();
     updateSkeletonVisibility();
 
     toggleCameraBtn.textContent = 'Initializing...';
@@ -154,8 +168,23 @@ function stopCamera(): void {
   }
 }
 
+function updateCamPreviewVisibility(): void {
+  if (!cameraActive) {
+    camPreviewPane.classList.remove('visible');
+    return;
+  }
+  // If both cam and skeleton are hidden, hide the entire pane
+  if (!showCam && !showSkeleton) {
+    camPreviewPane.classList.remove('visible');
+  } else {
+    camPreviewPane.classList.add('visible');
+  }
+  // Show or hide the video feed
+  videoEl.style.display = showCam ? 'block' : 'none';
+}
+
 function updateSkeletonVisibility(): void {
-  if (skeletonOverlay) {
+  if (showSkeleton) {
     skeletonCanvas.classList.add('visible');
   } else {
     skeletonCanvas.classList.remove('visible');
@@ -165,9 +194,11 @@ function updateSkeletonVisibility(): void {
 
 // Toggle skeleton overlay on/off
 toggleSkeletonBtn.addEventListener('click', () => {
-  skeletonOverlay = !skeletonOverlay;
-  toggleSkeletonBtn.textContent = skeletonOverlay ? 'Hide Skeleton' : 'Skeleton';
+  showSkeleton = !showSkeleton;
+  settingShowSkeleton.checked = showSkeleton;
+  toggleSkeletonBtn.textContent = showSkeleton ? 'Hide Skeleton' : 'Skeleton';
   updateSkeletonVisibility();
+  updateCamPreviewVisibility();
 });
 
 // Close preview pane (tracking continues, just hides the preview)
@@ -197,6 +228,35 @@ trackingModeSelect.addEventListener('change', async () => {
 
 // Reset camera button
 resetCameraBtn?.addEventListener('click', () => resetCamera(ctx));
+
+// Pose selector
+poseSelector.addEventListener('change', () => {
+  const vrm = getCurrentVRM();
+  if (!vrm) return;
+  const preset = POSE_PRESETS.find((p) => p.name === poseSelector.value);
+  if (preset) {
+    preset.apply(vrm);
+  }
+});
+
+// Settings: Show Camera toggle
+settingShowCam.addEventListener('change', () => {
+  showCam = settingShowCam.checked;
+  updateCamPreviewVisibility();
+});
+
+// Settings: Show Skeleton toggle
+settingShowSkeleton.addEventListener('change', () => {
+  showSkeleton = settingShowSkeleton.checked;
+  toggleSkeletonBtn.textContent = showSkeleton ? 'Hide Skeleton' : 'Skeleton';
+  updateSkeletonVisibility();
+  updateCamPreviewVisibility();
+});
+
+// Settings: Show Grid toggle
+settingShowGrid.addEventListener('change', () => {
+  ctx.grid.visible = settingShowGrid.checked;
+});
 
 // --- Auto-initialization ---
 
@@ -265,7 +325,7 @@ function animate(): void {
     }
 
     // Skeleton overlay drawing
-    if (skeletonOverlay) {
+    if (showSkeleton) {
       clearSkeletonCanvas(skeletonCanvas);
       if (poseResult && poseResult.landmarks.length > 0) {
         drawPoseSkeleton(skeletonCanvas, poseResult.landmarks);

@@ -330,6 +330,23 @@ html, body {
   border-radius: 3px;
 }
 
+/* Toggle controls */
+.toggle-label {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   #workspace {
